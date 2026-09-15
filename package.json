@@ -2,7 +2,7 @@
   "name": "gzaat-wordette",
   "version": "1.0.0",
   "private": true,
-  "description": "GZAAT Wordette \u2014 the daily word game for the Gazette, with the word database behind it",
+  "description": "The Wordette \u2014 the daily word game for the Gazette, with the word database behind it",
   "type": "module",
   "engines": {
     "node": ">=22.5"

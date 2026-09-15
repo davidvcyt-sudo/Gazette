@@ -1,76 +1,24 @@
-# GZAAT Wordette — blocklist
+# The Wordette — words that are never the answer
 #
-# Words listed here are never imported as puzzle answers and never scheduled,
-# even if they are common English words. They remain valid *guesses* if they
-# are in guesses.txt — blocking only keeps a word from being the word of the day.
+# These stay in the game: a reader can type them and the tiles will colour
+# normally. They are simply never chosen as the word of the day.
 #
-# Editors: add or remove entries freely, one lowercase word per line, then run
-#   npm run db:reset
+# This is the gentler of the two lists. For profanity and slurs — words that
+# should not be in the game at all — see banned.txt.
+#
+# Editors: one lowercase five-letter word per line, then run `npm run db:reset`.
 # Lines starting with # are comments.
 
-# --- profanity and vulgar terms ---
-arses
-bitch
-cocks
-crapy
-cunts
-dicks
-farts
-fucks
-pissy
-shite
-shits
-turds
-twats
-wanks
-
-# --- sexual / anatomical ---
-boner
-booty
-bosom
-dildo
-groin
-horny
-nudes
-penis
-pubes
-pussy
-semen
-sperm
-sluts
-vulva
-whore
-
-# --- slurs and terms used as slurs ---
-chink
-coons
-dagos
-darky
-dykes
-gippo
-gooks
-gyppo
-kikes
-micks
-negro
-paddy
-queer
-spick
-spics
-wench
-
-# --- violence against people, hate, self-harm ---
-lynch
-noose
-raped
-rapes
-nazis
+# --- difficult subject matter for a daily puzzle ---
 bigot
+jihad
+lynch
+nazis
+noose
 slave
 slavs
-jihad
 
-# --- unpleasant for a family puzzle ---
+# --- unpleasant over breakfast ---
 feces
 fetus
 puked

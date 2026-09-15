@@ -4,8 +4,8 @@
 
 export const CONFIG = {
   /** Shown in the header and in the text readers share. */
-  name: 'GZAAT Wordette',
-  publication: 'The Gazette',
+  name: 'The Wordette',
+  publication: 'GZAAT Gazette',
 
   /** Change these and re-export the database if you ever want a 6-letter game. */
   wordLength: 5,

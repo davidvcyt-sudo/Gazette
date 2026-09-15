@@ -1,6 +1,6 @@
-# GZAAT Wordette
+# The Wordette
 
-The Gazette's daily five-letter word game: six guesses, one new word every day,
+The GZAAT Gazette's daily five-letter word game: six guesses, one new word every day,
 the same word for every reader. It is plain HTML, CSS and JavaScript — no build
 step, no framework, no npm packages — plus a small database that decides which
 word belongs to which day.
@@ -96,9 +96,21 @@ are where anything worth customising lives.
 
 ## Word lists
 
-The starting dictionary is about 14,800 five-letter English words, of which the
+The starting dictionary is about 14,700 five-letter English words, of which the
 2,000 most common are marked as possible answers, ordered by how often they
-appear in written English. `scripts/seed/blocklist.txt` keeps profanity, slurs
-and proper nouns out of the answers; it is an ordinary text file and you should
-edit it to suit the paper. The first fortnight of the calendar is deliberately
+appear in written English. The first fortnight of the calendar is deliberately
 stocked with easy words.
+
+Two plain text files in `scripts/seed/` decide what is off limits, and they do
+different jobs:
+
+- **`banned.txt`** — profanity and slurs. These are not in the game at all:
+  typing one is refused exactly like a made-up word, and nothing is shown to the
+  reader. Roughly 140 words, taken from two published profanity lists and
+  checked one by one against the dictionary.
+- **`blocklist.txt`** — words that are never the answer but can still be typed.
+  This is for ordinary words that make poor daily puzzles: proper nouns like
+  `henry`, and difficult subject matter like `slave`.
+
+Both are ordinary lists, one word per line. Edit them to suit the paper and run
+`npm run db:reset`.

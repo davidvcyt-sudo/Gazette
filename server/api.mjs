@@ -162,7 +162,7 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`GZAAT Wordette API and site at http://localhost:${PORT}/wordette/`);
+  console.log(`The Wordette API and site at http://localhost:${PORT}/wordette/`);
   console.log(`today's puzzle: http://localhost:${PORT}/api/wordette/puzzle`);
   console.log(`remember to set source.mode to 'api' in public/wordette/js/config.js`);
 });

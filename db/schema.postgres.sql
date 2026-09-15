@@ -1,8 +1,8 @@
 -- =============================================================================
--- GZAAT Wordette — the same design for PostgreSQL
+-- The Wordette — the same design for PostgreSQL
 --
 -- The CLI in scripts/ speaks SQLite, which is what makes this project run with
--- no installation at all. If the Gazette's website already has a Postgres
+-- no installation at all. If the GZAAT Gazette's website already has a Postgres
 -- database and you would rather keep the words there, this is the same schema
 -- in Postgres terms: same tables, same rules, same views.
 -- =============================================================================

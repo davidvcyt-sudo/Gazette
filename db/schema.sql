@@ -1,5 +1,5 @@
 -- =============================================================================
--- GZAAT Wordette — word & puzzle database (SQLite)
+-- The Wordette — word & puzzle database (SQLite)
 --
 -- This file is the source of truth for the schema. Rebuild an empty database
 -- with:  npm run db:init
@@ -37,9 +37,13 @@ INSERT OR IGNORE INTO meta (key, value) VALUES
 --
 --   is_answer  1 = may be picked as a word of the day (curated, common words)
 --              0 = accepted as a guess only (the long tail of the dictionary)
---   is_blocked 1 = never schedule this, whatever is_answer says. Used for the
---              blocklist (profanity, slurs, proper nouns) so an editor can veto
---              a word without deleting it from the guess dictionary.
+--   is_blocked 1 = never schedule this, whatever is_answer says. The word can
+--              still be typed as a guess — this is the gentle veto, for words
+--              like "slave" or "henry" that are real but make poor puzzles.
+--   is_banned  1 = the word is not in the game at all. It is left out of the
+--              exported dictionary, so typing it is refused exactly like a
+--              made-up word. This is where profanity and slurs go. A banned
+--              word is always blocked too; the CHECK below enforces that.
 --   frequency_rank  1 = most common English 5-letter word. NULL = unranked.
 --                   This is what `difficulty` is derived from.
 -- -----------------------------------------------------------------------------
@@ -49,6 +53,7 @@ CREATE TABLE IF NOT EXISTS words (
                          CHECK (word GLOB '[a-z][a-z][a-z][a-z][a-z]'),
   is_answer      INTEGER NOT NULL DEFAULT 0 CHECK (is_answer  IN (0, 1)),
   is_blocked     INTEGER NOT NULL DEFAULT 0 CHECK (is_blocked IN (0, 1)),
+  is_banned      INTEGER NOT NULL DEFAULT 0 CHECK (is_banned  IN (0, 1)),
   frequency_rank INTEGER CHECK (frequency_rank IS NULL OR frequency_rank > 0),
   difficulty     TEXT    NOT NULL DEFAULT 'medium'
                          CHECK (difficulty IN ('easy', 'medium', 'hard')),
@@ -56,11 +61,13 @@ CREATE TABLE IF NOT EXISTS words (
   source         TEXT    NOT NULL DEFAULT 'seed',
   note           TEXT,
   created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
-  updated_at     TEXT    NOT NULL DEFAULT (datetime('now'))
+  updated_at     TEXT    NOT NULL DEFAULT (datetime('now')),
+  -- A word that is not in the game cannot be the word of the day either.
+  CHECK (is_banned = 0 OR is_blocked = 1)
 );
 
 CREATE INDEX IF NOT EXISTS idx_words_pool
-  ON words (is_answer, is_blocked, frequency_rank);
+  ON words (is_answer, is_blocked, is_banned, frequency_rank);
 
 -- -----------------------------------------------------------------------------
 -- puzzles: the calendar
@@ -181,6 +188,7 @@ SELECT w.id, w.word, w.difficulty, w.frequency_rank
 FROM   words w
 WHERE  w.is_answer = 1
   AND  w.is_blocked = 0
+  AND  w.is_banned = 0
   AND  NOT EXISTS (SELECT 1 FROM puzzles p WHERE p.word_id = w.id)
 ORDER  BY w.frequency_rank;
 
@@ -198,3 +206,8 @@ JOIN   words   w ON w.id = p.word_id
 LEFT   JOIN results r ON r.puzzle_id = p.id
 GROUP  BY p.id
 ORDER  BY p.puzzle_date;
+
+-- Every word the game will accept as a guess: the dictionary minus the
+-- banned list. This is exactly what `export` writes to dictionary.json.
+CREATE VIEW IF NOT EXISTS v_guess_dictionary AS
+SELECT word FROM words WHERE is_banned = 0 ORDER BY word;

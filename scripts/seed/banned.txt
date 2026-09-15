@@ -1,0 +1,160 @@
+# The Wordette — banned words
+#
+# These words are not in the game at all. They are never the word of the day,
+# and typing one is refused the same way a made-up word is: "Not in the word
+# list". Nothing about them is shown to the reader.
+#
+# This is the stronger of the two lists. Its neighbour, blocklist.txt, only
+# stops a word being the ANSWER while leaving it typeable — that one is for
+# ordinary words like "slave" or "henry" that simply do not make good puzzles.
+#
+# The list below is profanity, slurs, and sexual and genital terms, drawn from
+# two published profanity lists and checked word by word against the game's
+# dictionary. Ordinary English that those lists over-flag — abuse, cocky,
+# naked, moron, leper and about two dozen more — was deliberately left in the
+# game, because refusing a normal word confuses a player.
+#
+# Editors: this is an ordinary text file, one lowercase five-letter word per
+# line. Add or remove entries and run `npm run db:reset`. Lines starting with
+# # are comments.
+
+ahole
+arses
+asses
+bimbo
+bitch
+boche
+bogan
+boink
+boner
+boobs
+boong
+booty
+bosom
+busty
+cawks
+chink
+chode
+chugs
+clits
+cocks
+cooly
+coons
+crapy
+cunny
+cunts
+dagos
+darky
+dicks
+dildo
+dinks
+dykes
+fagot
+farts
+fatso
+felch
+fisty
+fucks
+fugly
+ginzo
+gippo
+glans
+gonad
+gooks
+gooky
+goras
+goyim
+groin
+gubba
+guido
+gypos
+gyppo
+gyppy
+hadji
+hajis
+hajji
+haole
+hebes
+honky
+horis
+horny
+hoser
+hussy
+hymen
+jewed
+jiggy
+kafir
+kikes
+kraut
+labia
+lesbo
+lezzo
+lezzy
+limey
+lubra
+massa
+micks
+minge
+mocky
+negro
+nigga
+nigre
+nooky
+nudes
+nudie
+packy
+paddy
+pansy
+paska
+penis
+pikey
+pinko
+pises
+pocho
+pommy
+porno
+pubes
+pubic
+pubis
+pussy
+queer
+quiff
+raped
+raper
+rapes
+sadis
+sambo
+scrog
+semen
+seppo
+sexed
+shite
+shits
+sissy
+skank
+skeet
+slopy
+sluts
+sodom
+sperm
+spick
+spics
+spiks
+spunk
+squaw
+teets
+teste
+titty
+turds
+tushy
+twats
+twink
+vulva
+wanks
+wanky
+wench
+whore
+wigga
+willy
+woose
+yobbo

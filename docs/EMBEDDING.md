@@ -14,7 +14,7 @@ That is the whole deployment. Then set two things in
 `public/wordette/js/config.js`:
 
 ```js
-publication: 'The Gazette',                    // your paper's name
+publication: 'GZAAT Gazette',                    // your paper's name
 shareUrl: 'https://gazette.example.ge/wordette/' // where readers who see a shared result should land
 ```
 
@@ -43,7 +43,7 @@ what it actually needs.
 ```html
 <iframe
   src="https://gazette.example.ge/wordette/"
-  title="GZAAT Wordette"
+  title="The Wordette"
   id="gzaat-wordette"
   style="width: 100%; height: 720px; border: 0; display: block; margin: 2rem auto; max-width: 560px;"
   loading="lazy"
@@ -90,7 +90,7 @@ palette is defined just below, and the high-contrast pair (`--correct` and
 `--present` only) below that — if you change the greens and yellows, look at the
 dark and high-contrast blocks too.
 
-The masthead text lives in `index.html`: `The Gazette` above the title, and the
+The masthead text lives in `index.html`: `GZAAT Gazette` above the title, and the
 line at the foot of the page.
 
 ## Archive links

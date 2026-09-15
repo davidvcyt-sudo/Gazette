@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * GZAAT Wordette — word database CLI.
+ * The Wordette — word database CLI.
  *
  * Everything an editor needs to do to the puzzle database lives here:
  * building it, loading the word lists, filling the calendar, overriding a
@@ -112,13 +112,15 @@ function cmdImport() {
   const db = openDatabase();
   const guesses = readSeedFile('guesses.txt');
   const answers = readSeedFile('answers.txt');
-  // Blocklist entries that are not five letters can never show up in the game
-  // at all, so they are reported and dropped rather than failing the import.
-  const blocked = readSeedFile('blocklist.txt').filter((word) => {
+  // Entries that are not five letters can never show up in the game at all, so
+  // they are reported and dropped rather than failing the import.
+  const fiveLetters = (listName) => readSeedFile(listName).filter((word) => {
     if (/^[a-z]{5}$/.test(word)) return true;
-    console.log(`ignoring blocklist entry "${word}" — not a ${WORD_LENGTH}-letter word`);
+    console.log(`ignoring ${listName} entry "${word}" — not a ${WORD_LENGTH}-letter word`);
     return false;
   });
+  const blocked = fiveLetters('blocklist.txt');
+  const banned = fiveLetters('banned.txt');
 
   const malformed = [...guesses, ...answers].filter((w) => !/^[a-z]{5}$/.test(w));
   if (malformed.length) {
@@ -139,6 +141,13 @@ function cmdImport() {
   const blockWord = db.prepare('UPDATE words SET is_blocked = 1 WHERE word = ?');
   const insertBlocked = db.prepare(
     `INSERT INTO words (word, is_answer, is_blocked, source) VALUES (?, 0, 1, 'blocklist')
+     ON CONFLICT (word) DO NOTHING`,
+  );
+  // Banned words are blocked as well — the database insists on it.
+  const banWord = db.prepare('UPDATE words SET is_blocked = 1, is_banned = 1 WHERE word = ?');
+  const insertBanned = db.prepare(
+    `INSERT INTO words (word, is_answer, is_blocked, is_banned, source)
+     VALUES (?, 0, 1, 1, 'banned')
      ON CONFLICT (word) DO NOTHING`,
   );
 
@@ -167,17 +176,28 @@ function cmdImport() {
       conflicts.push(`${word} (${error.message})`);
     }
   }
+  for (const word of banned) {
+    try {
+      insertBanned.run(word);
+      banWord.run(word);
+    } catch (error) {
+      conflicts.push(`${word} (${error.message})`);
+    }
+  }
 
   const counts = db.prepare(
     `SELECT COUNT(*) AS total,
-            SUM(is_answer)  AS answers,
-            SUM(is_blocked) AS blocked
+            SUM(is_banned = 0) AS playable,
+            SUM(is_answer = 1 AND is_blocked = 0) AS answers,
+            SUM(is_blocked = 1 AND is_banned = 0) AS blocked,
+            SUM(is_banned) AS banned
      FROM words`,
   ).get();
   db.close();
 
-  console.log(`dictionary: ${counts.total} words`);
-  console.log(`answer pool: ${counts.answers} eligible, ${counts.blocked} blocked`);
+  console.log(`dictionary: ${counts.playable} words a reader can type`);
+  console.log(`answer pool: ${counts.answers} can be the word of the day`);
+  console.log(`restricted: ${counts.blocked} never the answer, ${counts.banned} not in the game at all`);
   if (conflicts.length) {
     console.log(`\ncould not block ${conflicts.length} word(s):`);
     for (const line of conflicts) console.log(`  ${line}`);
@@ -422,7 +442,7 @@ function cmdToday() {
   if (flags.json) {
     console.log(JSON.stringify(row, null, 2));
   } else {
-    console.log(`GZAAT Wordette #${row.puzzle_number} — ${row.puzzle_date} — ${row.word} (${row.difficulty})`);
+    console.log(`The Wordette #${row.puzzle_number} — ${row.puzzle_date} — ${row.word} (${row.difficulty})`);
   }
 }
 
@@ -446,18 +466,95 @@ function cmdAdd() {
   console.log('remember to run:  npm run db:export');
 }
 
+/**
+ * The database refuses to restrict a word that is on the calendar. That is the
+ * right rule, but "unschedule that date first" is no help without the date.
+ */
+function explainScheduled(db, word, action) {
+  const booked = db.prepare(
+    `SELECT p.puzzle_date, p.puzzle_number FROM puzzles p
+      JOIN words w ON w.id = p.word_id WHERE w.word = ?`,
+  ).get(word);
+  if (!booked) return null;
+  return (
+    `"${word}" is the answer on ${booked.puzzle_date} (#${booked.puzzle_number}), ` +
+    `so it cannot be ${action} yet. Free that day first:\n` +
+    `  node scripts/wordette-db.mjs unschedule --date ${booked.puzzle_date}\n` +
+    `  node scripts/wordette-db.mjs schedule --from ${booked.puzzle_date} --days 1`
+  );
+}
+
 function cmdBlock(shouldBlock) {
   const word = normalizeWord(requireFlag('word'));
   const db = openDatabase();
-  const row = db.prepare('SELECT id FROM words WHERE word = ?').get(word);
+  const row = db.prepare('SELECT id, is_blocked, is_banned FROM words WHERE word = ?').get(word);
   if (!row) fail(`"${word}" is not in the dictionary`);
+
+  if (!shouldBlock && row.is_banned) {
+    fail(`"${word}" is banned from the game entirely. Use:  unban --word ${word}`);
+  }
+  if (Boolean(row.is_blocked) === shouldBlock) {
+    console.log(
+      shouldBlock
+        ? `"${word}" was already set never to be the answer — nothing to do`
+        : `"${word}" was already allowed as an answer — nothing to do`,
+    );
+    db.close();
+    return;
+  }
+
   try {
     db.prepare('UPDATE words SET is_blocked = ? WHERE id = ?').run(shouldBlock ? 1 : 0, row.id);
   } catch (error) {
-    fail(error.message);
+    fail(explainScheduled(db, word, 'blocked') ?? error.message);
   }
   db.close();
-  console.log(`"${word}" is ${shouldBlock ? 'blocked — it will never be a word of the day' : 'unblocked'}`);
+  console.log(
+    shouldBlock
+      ? `"${word}" will never be a word of the day. Readers can still type it.`
+      : `"${word}" can be a word of the day again`,
+  );
+  console.log('remember to run:  npm run db:export');
+}
+
+/**
+ * Banning takes a word out of the game altogether: it leaves the exported
+ * dictionary, so typing it is refused like any word that does not exist.
+ */
+function cmdBan(shouldBan) {
+  const word = normalizeWord(requireFlag('word'));
+  const db = openDatabase();
+  const row = db.prepare('SELECT id, is_banned FROM words WHERE word = ?').get(word);
+  if (!row) fail(`"${word}" is not in the dictionary`);
+
+  if (Boolean(row.is_banned) === shouldBan) {
+    console.log(
+      shouldBan
+        ? `"${word}" is already out of the game — nothing to do`
+        : `"${word}" was not banned — nothing to do`,
+    );
+    db.close();
+    return;
+  }
+
+  try {
+    if (shouldBan) {
+      db.prepare('UPDATE words SET is_blocked = 1, is_banned = 1 WHERE id = ?').run(row.id);
+    } else {
+      db.prepare('UPDATE words SET is_banned = 0 WHERE id = ?').run(row.id);
+    }
+  } catch (error) {
+    fail(explainScheduled(db, word, 'banned') ?? error.message);
+  }
+  db.close();
+
+  if (shouldBan) {
+    console.log(`"${word}" is out of the game — typing it now says "Not in the word list"`);
+  } else {
+    console.log(`"${word}" can be typed again, but is still not a word of the day`);
+    console.log(`to let it be the answer too:  unblock --word ${word}`);
+  }
+  console.log('remember to run:  npm run db:export');
 }
 
 function cmdExport() {
@@ -492,7 +589,9 @@ function cmdExport() {
     answers: schedule.map((row) => encodeAnswer(row.word, row.puzzle_number)),
   };
 
-  const words = db.prepare('SELECT word FROM words ORDER BY word').all().map((row) => row.word);
+  // v_guess_dictionary is the dictionary minus the banned list, so profanity
+  // and slurs are not merely unused — they are never sent to the browser.
+  const words = db.prepare('SELECT word FROM v_guess_dictionary').all().map((row) => row.word);
   const dictionary = {
     generatedAt: puzzles.generatedAt,
     wordLength: puzzles.wordLength,
@@ -520,9 +619,22 @@ function cmdDoctor() {
   const today = todayISO();
 
   const counts = db.prepare(
-    `SELECT COUNT(*) AS words, SUM(is_answer) AS answers, SUM(is_blocked) AS blocked FROM words`,
+    `SELECT SUM(is_banned = 0) AS playable,
+            SUM(is_answer = 1 AND is_blocked = 0) AS answers,
+            SUM(is_blocked = 1 AND is_banned = 0) AS blocked,
+            SUM(is_banned) AS banned
+     FROM words`,
   ).get();
-  notes.push(`dictionary: ${counts.words} words, ${counts.answers} answer-eligible, ${counts.blocked} blocked`);
+  notes.push(
+    `dictionary: ${counts.playable} typeable, ${counts.answers} can be the answer, ` +
+    `${counts.blocked} never the answer, ${counts.banned} banned from the game`,
+  );
+
+  const leaked = db.prepare(
+    `SELECT COUNT(*) AS n FROM words w
+      WHERE w.is_banned = 1 AND w.word IN (SELECT word FROM v_guess_dictionary)`,
+  ).get().n;
+  if (leaked) problems.push(`${leaked} banned word(s) are still in the guess dictionary`);
 
   const schedule = db.prepare('SELECT * FROM v_schedule').all();
   if (!schedule.length) {
@@ -607,13 +719,14 @@ function cmdDoctor() {
 }
 
 function cmdHelp() {
-  console.log(`GZAAT Wordette — word database CLI
+  console.log(`The Wordette — word database CLI
 
   node scripts/wordette-db.mjs <command> [options]
 
 Setting up
   init [--force]                 Create db/gzaat-wordette.db from db/schema.sql
   import                         Load scripts/seed/*.txt into the dictionary
+                                 (answers, guesses, blocklist.txt, banned.txt)
 
 Running the calendar
   schedule [--from DATE] [--days N] [--max-difficulty easy|medium|hard] [--seed N]
@@ -631,8 +744,12 @@ Words
   add --word WORD [--answer] [--note TEXT]
                                  Add a word. Without --answer it is only a
                                  valid guess; with it, it can be a daily word.
-  block --word WORD              Never use this word as a daily word
+  block --word WORD              Never use this word as the answer, but let
+                                 readers keep typing it
   unblock --word WORD            Undo a block
+  ban --word WORD                Remove the word from the game altogether —
+                                 typing it is refused. For profanity and slurs.
+  unban --word WORD              Undo a ban
 
 Publishing
   export [--out DIR]             Write the JSON files the website reads
@@ -660,6 +777,8 @@ const commands = {
   add: cmdAdd,
   block: () => cmdBlock(true),
   unblock: () => cmdBlock(false),
+  ban: () => cmdBan(true),
+  unban: () => cmdBan(false),
   export: cmdExport,
   doctor: cmdDoctor,
   help: cmdHelp,

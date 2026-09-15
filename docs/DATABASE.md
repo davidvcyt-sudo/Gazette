@@ -18,14 +18,28 @@ Every five-letter word the game knows, about 14,800 of them.
 | --- | --- |
 | `word` | The word itself, lowercase. The database refuses anything that is not five letters of a–z. |
 | `is_answer` | `1` if the word is common enough to be a word of the day. The other ~12,800 are accepted as guesses only. |
-| `is_blocked` | `1` if the word must never be an answer — profanity, slurs, proper nouns, anything the editors veto. |
+| `is_blocked` | `1` if the word must never be the answer. It can still be typed as a guess — this is the gentle veto, for real words that make poor puzzles. |
+| `is_banned` | `1` if the word is not in the game at all. It is left out of the exported dictionary, so typing it is refused like a made-up word. This is where profanity and slurs go, and the database insists a banned word is blocked too. |
 | `frequency_rank` | `1` is the most common five-letter word in written English. This is what `difficulty` is worked out from. |
 | `difficulty` | `easy` (rank 1–600), `medium` (601–1400) or `hard`. Use it to keep the first week of term gentle. |
-| `source` | Where the word came from: `seed`, `blocklist`, or `editor` for words you added. |
+| `source` | Where the word came from: `seed`, `blocklist`, `banned`, or `editor` for words you added. |
 | `note` | Free text. Handy for "chosen for the science issue". |
 
 Splitting guesses from answers is what makes the game feel fair: readers can
 type any real word, but they are never asked to guess one nobody uses.
+
+**The two ways to restrict a word.** Blocking and banning are not the same
+thing, and reaching for the wrong one is the easy mistake here:
+
+```bash
+npm run db -- block --word henry   # never the answer; readers can still type it
+npm run db -- ban   --word bitch   # gone: typing it says "Not in the word list"
+```
+
+Ban profanity and slurs. Block ordinary words that simply do not make good
+puzzles — proper nouns, difficult subject matter. Banning a word that readers
+might reasonably type is how you end up refusing `abuse` or `naked`, which just
+looks broken to a player.
 
 ### `puzzles` — the calendar
 
@@ -42,7 +56,9 @@ The three `UNIQUE` constraints are the whole design:
 
 Two triggers back that up: a blocked or guess-only word cannot be put on the
 calendar, and a word that is already on the calendar cannot be blocked without
-being unscheduled first. Those rules hold even if someone edits the database by
+being unscheduled first. A `CHECK` constraint adds a third rule — a banned word
+is always blocked, so a word can never be absent from the game and eligible to
+be its answer at the same time. Those rules hold even if someone edits the database by
 hand instead of using the CLI.
 
 ### `results` — how everyone did (optional)
@@ -145,7 +161,10 @@ one. Export refuses to run if the calendar has a gap in it, because a gap would
 silently shift every word after it by a day.
 
 **`dictionary.json`** — every accepted guess, joined into one long string and
-split back up in the browser. About 73 KB, 35 KB over a gzipped connection.
+split back up in the browser. About 73 KB, 35 KB over a gzipped connection. It
+is written from the `v_guess_dictionary` view, which is the dictionary minus
+the banned list, so profanity and slurs are never sent to the browser at all —
+they cannot be recovered from the page by a reader who goes looking.
 
 ### About the encoding
 
@@ -181,7 +200,7 @@ that is the cost of the trade.
 ## Using a different database
 
 The CLI speaks SQLite because it comes built into Node and needs no
-installation. If the Gazette's site already runs on Postgres or MySQL, the
+installation. If the GZAAT Gazette's site already runs on Postgres or MySQL, the
 design ports directly:
 
 - **Postgres** — [`db/schema.postgres.sql`](../db/schema.postgres.sql), ready to run.
