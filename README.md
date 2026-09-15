@@ -6,6 +6,7 @@ step, no framework, no npm packages — plus a small database that decides which
 word belongs to which day.
 
 ```
+dist/                the whole game as one paste-anywhere HTML file
 public/wordette/     the game itself — copy this folder onto the website
 db/                the schema for the word database
 scripts/           the command line tool the newsroom uses, and the word lists
@@ -13,6 +14,16 @@ server/            a local web server, and an optional puzzle API
 docs/              how the database works, and how to embed the game
 tests/             tests for the scoring rules
 ```
+
+## One file, if that is easier
+
+`npm run build:single` writes **`dist/the-wordette.html`** — the whole game in a
+single document: markup, styles, code and five years of words, with nothing to
+fetch and nothing to install. Open it by double-clicking it, or paste it into a
+website builder's HTML or embed box. About 116,000 characters.
+
+It is built from the same sources as everything else, so after changing words or
+colours, re-run it to refresh the file.
 
 ## Quick start
 

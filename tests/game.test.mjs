@@ -6,6 +6,7 @@ import {
   restoreGame, scoreGuess, submitGuess,
 } from '../public/wordette/js/game.js';
 import { decodeAnswer, encodeAnswer } from '../public/wordette/js/cipher.js';
+import { packWords, unpackWords } from '../public/wordette/js/wordlist.js';
 import { addDays, daysBetween, isISODate, todayISO } from '../public/wordette/js/dates.js';
 
 const { ABSENT: _, PRESENT: P, CORRECT: C } = MARK;
@@ -225,5 +226,58 @@ describe('dates', () => {
 
   test('todayISO is a valid date', () => {
     assert.equal(isISODate(todayISO()), true);
+  });
+});
+
+describe('word list packing', () => {
+  test('gives back exactly the words it was given', () => {
+    const words = ['aahed', 'crane', 'lunch', 'zymic', 'aback', 'fuzzy'];
+    const unpacked = unpackWords(packWords(words), 5);
+    assert.equal(unpacked.size, words.length);
+    for (const word of words) assert.equal(unpacked.has(word), true);
+  });
+
+  test('does not invent words that were never in the list', () => {
+    const unpacked = unpackWords(packWords(['crane', 'lunch']), 5);
+    assert.equal(unpacked.has('slate'), false);
+    assert.equal(unpacked.has('aaaaa'), false);
+  });
+
+  test('handles the ends of the alphabet', () => {
+    // 'aaaaa' is zero and 'zzzzz' is the largest number a five-letter word has,
+    // so they exercise both ends of the gap coding.
+    const unpacked = unpackWords(packWords(['aaaaa', 'zzzzz']), 5);
+    assert.deepEqual([...unpacked].sort(), ['aaaaa', 'zzzzz']);
+  });
+
+  test('survives a real-sized list', () => {
+    const words = [];
+    for (let i = 0; i < 5000; i += 1) {
+      let value = i * 2377;
+      let word = '';
+      for (let j = 0; j < 5; j += 1) {
+        word = String.fromCharCode(97 + (value % 26)) + word;
+        value = Math.floor(value / 26);
+      }
+      words.push(word);
+    }
+    const unique = [...new Set(words)];
+    const unpacked = unpackWords(packWords(unique), 5);
+    assert.equal(unpacked.size, unique.length);
+  });
+
+  test('packs much smaller than writing the words out', () => {
+    const words = [...new Set(
+      Array.from({ length: 3000 }, (_, i) => {
+        let value = i * 3931;
+        let word = '';
+        for (let j = 0; j < 5; j += 1) {
+          word = String.fromCharCode(97 + (value % 26)) + word;
+          value = Math.floor(value / 26);
+        }
+        return word;
+      }),
+    )];
+    assert.ok(packWords(words).length < words.join('').length * 0.75);
   });
 });

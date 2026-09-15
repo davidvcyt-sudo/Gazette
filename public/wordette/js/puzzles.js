@@ -7,6 +7,7 @@
  */
 
 import { decodeAnswer } from './cipher.js';
+import { fetchJson, inlineData } from './dictionary.js';
 import { addDays, daysBetween, isISODate, todayISO } from './dates.js';
 
 /**
@@ -24,12 +25,7 @@ export async function loadPuzzle(config, { date, puzzleNumber } = {}) {
 }
 
 async function fromSchedule(config, wantedDate, puzzleNumber) {
-  const response = await fetch(config.source.puzzlesUrl, { cache: 'no-cache' });
-  if (!response.ok) {
-    throw new Error(`could not load ${config.source.puzzlesUrl} (${response.status})`);
-  }
-
-  const schedule = await response.json();
+  const schedule = inlineData('puzzles') ?? await fetchJson(config.source.puzzlesUrl);
   if (!Array.isArray(schedule.answers) || !schedule.answers.length) {
     throw new Error('the puzzle file has no answers in it');
   }

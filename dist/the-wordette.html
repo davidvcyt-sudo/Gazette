@@ -1,0 +1,2260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Wordette — GZAAT Gazette</title>
+<meta name="description" content="The GZAAT Gazette's daily five-letter word game. Six guesses, one new word every day.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#faf7f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%23117a4a'/><text x='50' y='72' font-size='64' font-family='Georgia,serif' font-weight='700' text-anchor='middle' fill='%23fff'>G</text></svg>">
+
+<script>
+  // Set the theme before the first paint so a dark-mode reader never gets a
+  // white flash. Kept inline and tiny for that reason.
+  try {
+    var saved = JSON.parse(localStorage.getItem('gzaat-wordette:v1:settings') || '{}');
+    if (saved.theme === 'light' || saved.theme === 'dark') {
+      document.documentElement.dataset.theme = saved.theme;
+    }
+    if (saved.highContrast) document.documentElement.dataset.contrast = 'high';
+  } catch (error) { /* first visit, or storage is blocked */ }
+</script>
+<style>
+/* =============================================================================
+   The Wordette
+   Newsprint colours around a board that still looks like the game everyone
+   already knows how to play.
+   ========================================================================== */
+
+:root {
+  /* Newsprint that has sat in a drawer for a few years: yellowed, warm, but
+     still a page you can read. */
+  --paper:        #f4ecdb;
+  --paper-sunk:   #ebe1cb;
+  --ink:          #201a12;
+  --ink-soft:     #6a5f4c;
+  --rule:         #d6c9ae;
+
+  --tile-border:  #c9bb9d;
+  --tile-filled:  #877c64;
+  --tile-text:    #201a12;
+  --tile-text-on: #fffdf7;
+
+  --absent:       #857b68;
+  --present:      #ab8420;
+  --correct:      #26714a;
+
+  --key:          #e3d8bf;
+  --key-hover:    #d6c9ab;
+  --key-text:     #201a12;
+
+  --accent:       #99291d;
+  --shadow:       0 10px 30px rgba(32, 26, 18, .16);
+
+  /* The two things that make paper look like paper: a speckle of fibre, and
+     yellowing that is heavier at the edges than in the middle. Both are kept
+     faint — turn them up here if you want the page more obviously aged, or set
+     them to `none` for flat colour. They are switched off in dark mode, where
+     there is no paper to imitate. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23f)' opacity='0.055'/%3E%3C/svg%3E");
+  --paper-aging:
+    radial-gradient(120% 85% at 50% -15%, rgba(126, 99, 47, .05), transparent 62%),
+    radial-gradient(110% 80% at 6% 112%, rgba(126, 99, 47, .045), transparent 58%);
+
+  --serif: Georgia, 'Iowan Old Style', 'Times New Roman', times, serif;
+  --sans:  ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+  color-scheme: light;
+}
+
+/* Dark by preference, unless the reader has explicitly chosen light. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper:       #14110e;
+    --paper-sunk:  #1d1915;
+    --ink:         #f3eee4;
+    --ink-soft:    #a0968a;
+    --rule:        #322c25;
+
+    --tile-border: #3b352d;
+    --tile-filled: #6a6154;
+    --tile-text:   #f3eee4;
+
+    --absent:      #403a32;
+    --present:     #a98c22;
+    --correct:     #2c8659;
+
+    --key:         #2b2620;
+    --key-hover:   #3a342c;
+    --key-text:    #f3eee4;
+
+    --accent:      #d4695f;
+    --shadow:      0 10px 30px rgba(0, 0, 0, .5);
+
+    --paper-grain: none;
+    --paper-aging: none;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper:       #14110e;
+  --paper-sunk:  #1d1915;
+  --ink:         #f3eee4;
+  --ink-soft:    #a0968a;
+  --rule:        #322c25;
+
+  --tile-border: #3b352d;
+  --tile-filled: #6a6154;
+  --tile-text:   #f3eee4;
+
+  --absent:      #403a32;
+  --present:     #a98c22;
+  --correct:     #2c8659;
+
+  --key:         #2b2620;
+  --key-hover:   #3a342c;
+  --key-text:    #f3eee4;
+
+  --accent:      #d4695f;
+  --shadow:      0 10px 30px rgba(0, 0, 0, .5);
+
+  --paper-grain: none;
+  --paper-aging: none;
+
+  color-scheme: dark;
+}
+
+/* Blue and orange read apart for the most common kinds of colour blindness. */
+:root[data-contrast='high'] {
+  --present: #3a86c8;
+  --correct: #d3691e;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--paper-aging);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 50%;
+  translate: -50% -120%;
+  z-index: 10;
+  padding: .6rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 0 0 .5rem .5rem;
+  font: 600 .9rem/1 var(--sans);
+  text-decoration: none;
+}
+.skip-link:focus { translate: -50% 0; }
+
+/* --- masthead ------------------------------------------------------------ */
+
+.masthead {
+  padding: .5rem 1rem .75rem;
+  border-bottom: 3px double var(--rule);
+  text-align: center;
+}
+
+.masthead__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  min-height: 2.5rem;
+}
+
+.masthead__paper {
+  margin: 0;
+  font: italic 600 .85rem/1 var(--serif);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.masthead__tools { display: flex; gap: .15rem; }
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.25rem; height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.icon-button:hover { background: var(--paper-sunk); }
+.icon-button svg { width: 1.35rem; height: 1.35rem; fill: currentColor; }
+
+.masthead__title {
+  margin: .1rem 0 .15rem;
+  font: 700 clamp(1.7rem, 7vw, 2.4rem)/1 var(--serif);
+  letter-spacing: .02em;
+}
+
+.masthead__meta {
+  margin: 0;
+  font-size: .78rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.masthead__dot { margin: 0 .4rem; }
+
+/* --- board --------------------------------------------------------------- */
+
+.game {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  padding: 0 1rem;
+}
+
+.banner {
+  margin: .6rem 0 0;
+  padding: .4rem .8rem;
+  border-left: 3px solid var(--accent);
+  background: var(--paper-sunk);
+  font-size: .82rem;
+  color: var(--ink-soft);
+  text-align: left;
+  max-width: 24rem;
+}
+.banner strong { color: var(--ink); }
+
+.board-wrap {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 0;
+  padding: .5rem 0;
+}
+
+.board {
+  /* One tile size for the whole board: whichever of width, height or the
+     comfortable maximum runs out first. */
+  --gap: 5px;
+  --tile: min(
+    (100vw - 2rem - 4 * var(--gap)) / 5,
+    (100dvh - 20rem) / 6,
+    3.9rem
+  );
+  display: grid;
+  grid-template-rows: repeat(var(--rows, 6), var(--tile));
+  gap: var(--gap);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 5), var(--tile));
+  gap: var(--gap);
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--tile-border);
+  background: transparent;
+  color: var(--tile-text);
+  font: 700 calc(var(--tile) * .52)/1 var(--sans);
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.tile--filled { border-color: var(--tile-filled); animation: pop 110ms ease-out; }
+
+.tile--absent  { background: var(--absent);  border-color: var(--absent);  color: var(--tile-text-on); }
+.tile--present { background: var(--present); border-color: var(--present); color: var(--tile-text-on); }
+.tile--correct { background: var(--correct); border-color: var(--correct); color: var(--tile-text-on); }
+
+.tile.is-flipping { animation: flip var(--flip, 300ms) ease-in both; }
+
+.row.is-invalid { animation: shake 420ms ease-in-out; }
+.row.is-winner .tile { animation: bounce 520ms ease-in-out both; }
+.row.is-winner .tile:nth-child(2) { animation-delay: 80ms; }
+.row.is-winner .tile:nth-child(3) { animation-delay: 160ms; }
+.row.is-winner .tile:nth-child(4) { animation-delay: 240ms; }
+.row.is-winner .tile:nth-child(5) { animation-delay: 320ms; }
+
+@keyframes pop   { from { scale: .9; } 50% { scale: 1.06; } to { scale: 1; } }
+@keyframes flip  { 0% { transform: rotateX(0); } 50% { transform: rotateX(-90deg); } 100% { transform: rotateX(0); } }
+@keyframes shake { 10%, 90% { translate: -2px; } 20%, 80% { translate: 4px; } 30%, 50%, 70% { translate: -7px; } 40%, 60% { translate: 7px; } }
+@keyframes bounce { 0%, 100% { translate: 0; } 40% { translate: 0 -24px; } 60% { translate: 0 4px; } }
+
+/* --- toasts -------------------------------------------------------------- */
+
+.toasts {
+  position: fixed;
+  top: 6.5rem;
+  left: 50%;
+  translate: -50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+  pointer-events: none;
+}
+
+.toast {
+  padding: .6rem .9rem;
+  border-radius: .35rem;
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow);
+  font: 600 .85rem/1.2 var(--sans);
+  text-align: center;
+  animation: toast-in 140ms ease-out;
+}
+.toast.is-leaving { animation: toast-out 220ms ease-in forwards; }
+
+@keyframes toast-in  { from { opacity: 0; translate: 0 -6px; } }
+@keyframes toast-out { to   { opacity: 0; translate: 0 -6px; } }
+
+/* --- keyboard ------------------------------------------------------------ */
+
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  width: 100%;
+  max-width: 30rem;
+  padding: .5rem 0 max(.75rem, env(safe-area-inset-bottom));
+}
+
+.keyboard__row {
+  display: flex;
+  justify-content: center;
+  gap: .35rem;
+}
+
+.key {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 3.3rem;
+  padding: 0;
+  border: 0;
+  border-radius: .3rem;
+  background: var(--key);
+  color: var(--key-text);
+  font: 700 .95rem/1 var(--sans);
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 120ms ease;
+}
+.key:hover { background: var(--key-hover); }
+.key:active { scale: .96; }
+.key--wide { flex: 1.5 1 auto; font-size: .72rem; letter-spacing: .04em; }
+.key--wide svg { width: 1.3rem; height: 1.3rem; fill: currentColor; }
+
+.key--absent  { background: var(--absent);  color: var(--tile-text-on); }
+.key--present { background: var(--present); color: var(--tile-text-on); }
+.key--correct { background: var(--correct); color: var(--tile-text-on); }
+
+.colophon {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--rule);
+  margin-top: auto;
+  text-align: center;
+  font: italic .78rem/1.5 var(--serif);
+  color: var(--ink-soft);
+}
+.colophon p { margin: .7rem 0 0; }
+
+/* --- dialogs ------------------------------------------------------------- */
+
+.sheet {
+  width: min(100% - 2rem, 29rem);
+  max-height: min(90dvh, 44rem);
+  padding: 1.5rem;
+  border: 1px solid var(--rule);
+  border-radius: .6rem;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  overflow-y: auto;
+}
+.sheet::backdrop { background: rgba(10, 8, 6, .55); }
+.sheet[open] { animation: sheet-in 160ms ease-out; }
+@keyframes sheet-in { from { opacity: 0; translate: 0 10px; } }
+
+.sheet h2 {
+  margin: 0 0 .75rem;
+  padding-bottom: .5rem;
+  border-bottom: 2px solid var(--ink);
+  font: 700 1.4rem/1.1 var(--serif);
+}
+.sheet h3 {
+  margin: 1.4rem 0 .6rem;
+  font: 600 .78rem/1 var(--sans);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.sheet p { margin: .7rem 0; font-size: .92rem; line-height: 1.55; }
+
+.sheet__close-form { float: right; margin: -.5rem -.5rem 0 0; }
+.sheet__close {
+  width: 2rem; height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.sheet__close:hover { background: var(--paper-sunk); color: var(--ink); }
+
+.sheet__note {
+  margin-top: 1.2rem;
+  padding-top: .9rem;
+  border-top: 1px solid var(--rule);
+  font-size: .82rem !important;
+  color: var(--ink-soft);
+}
+
+.example { margin: 1rem 0; }
+.example__row { display: flex; gap: .3rem; margin-bottom: .4rem; }
+.example .tile {
+  width: 2.5rem; height: 2.5rem;
+  font-size: 1.25rem;
+}
+
+/* --- statistics ---------------------------------------------------------- */
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+  margin: 0;
+}
+.scoreboard div { text-align: center; }
+.scoreboard dt {
+  font-size: .68rem;
+  line-height: 1.3;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.scoreboard dd { margin: 0 0 .3rem; font: 700 1.7rem/1.2 var(--serif); }
+
+.distribution { display: flex; flex-direction: column; gap: .3rem; }
+.distribution__row { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.distribution__label { width: .9rem; font-weight: 700; text-align: right; }
+.distribution__bar {
+  min-width: 1.6rem;
+  padding: .12rem .4rem;
+  border-radius: .2rem;
+  background: var(--tile-filled);
+  color: var(--tile-text-on);
+  font-weight: 700;
+  text-align: right;
+  transition: width 260ms ease;
+}
+.distribution__bar--current { background: var(--correct); }
+
+.outcome {
+  margin-top: 1.3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+.outcome__answer {
+  margin: 0 0 .9rem !important;
+  text-align: center;
+  font: 1rem/1.4 var(--serif);
+}
+.outcome__answer strong {
+  display: block;
+  font-size: 1.6rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.outcome__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 1rem;
+}
+.countdown { text-align: center; }
+.countdown__label {
+  margin: 0 !important;
+  font-size: .68rem !important;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.countdown__clock { margin: .1rem 0 0 !important; font: 700 1.5rem/1.1 var(--serif); font-variant-numeric: tabular-nums; }
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .75rem 1.5rem;
+  border: 0;
+  border-radius: .3rem;
+  background: var(--correct);
+  color: #fff;
+  font: 700 .95rem/1 var(--sans);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.button svg { width: 1.1rem; height: 1.1rem; fill: currentColor; }
+.button:hover { filter: brightness(1.08); }
+.button--quiet {
+  background: none;
+  border: 1px solid var(--rule);
+  color: var(--ink-soft);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+.button--quiet:hover { border-color: var(--accent); color: var(--accent); filter: none; }
+
+/* --- settings ------------------------------------------------------------ */
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .9rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.setting--stacked { display: block; border-bottom: 0; }
+.setting__text { font-size: .95rem; font-weight: 600; cursor: pointer; }
+.setting__text span {
+  display: block;
+  margin-top: .15rem;
+  font-size: .78rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.switch {
+  appearance: none;
+  flex: none;
+  width: 2.9rem; height: 1.6rem;
+  border-radius: 1rem;
+  background: var(--tile-border);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+.switch::after {
+  content: '';
+  display: block;
+  width: 1.25rem; height: 1.25rem;
+  margin: .175rem;
+  border-radius: 50%;
+  background: #fff;
+  transition: translate 150ms ease;
+}
+.switch:checked { background: var(--correct); }
+.switch:checked::after { translate: 1.3rem; }
+.switch:disabled { opacity: .45; cursor: not-allowed; }
+
+.select {
+  padding: .45rem .6rem;
+  border: 1px solid var(--rule);
+  border-radius: .3rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: 600 .9rem var(--sans);
+}
+
+.fatal {
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 1rem 1.2rem;
+  border-left: 3px solid var(--accent);
+  background: var(--paper-sunk);
+  font-size: .95rem;
+  line-height: 1.55;
+}
+.fatal code {
+  display: inline-block;
+  padding: .1rem .35rem;
+  border-radius: .2rem;
+  background: var(--rule);
+  font-size: .85em;
+}
+
+:where(button, select, input, a):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --- short screens and print --------------------------------------------- */
+
+@media (max-height: 700px) {
+  .key { height: 2.9rem; }
+  .masthead__title { font-size: 1.5rem; }
+  .colophon { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+@media print {
+  .masthead__tools, .keyboard, .toasts, .colophon, .skip-link { display: none; }
+  body { background: #fff; color: #000; }
+}
+
+</style>
+</head>
+<body>
+<a class="skip-link" href="#board">Skip to the puzzle</a>
+
+<header class="masthead">
+  <div class="masthead__bar">
+    <p class="masthead__paper">GZAAT Gazette</p>
+    <nav class="masthead__tools" aria-label="Game menu">
+      <button type="button" class="icon-button" id="btn-help" aria-label="How to play">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 14.2a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Zm1.7-5.2c-.7.5-.9.8-.9 1.4v.3h-1.6v-.4c0-1.2.4-1.8 1.3-2.4.7-.5 1-.8 1-1.4 0-.6-.5-1-1.3-1s-1.4.4-1.7 1.1l-1.4-.7C9.6 7.6 10.6 7 12.2 7c1.7 0 2.9 1 2.9 2.4 0 1-.5 1.7-1.4 2.3Z"/></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-stats" aria-label="Your statistics">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h3.5v10H4Zm6.2 0V4h3.6v16h-3.6Zm6.3 0v-7H20v7h-3.5Z"/></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m19.4 13-.1-1 .1-1 2-1.6-2-3.4-2.4.8a7.6 7.6 0 0 0-1.7-1l-.4-2.5H9.1l-.4 2.5c-.6.2-1.2.6-1.7 1l-2.4-.8-2 3.4L4.7 11l-.1 1 .1 1-2 1.6 2 3.4 2.4-.8c.5.4 1 .8 1.7 1l.4 2.5h5.8l.4-2.5c.6-.2 1.2-.6 1.7-1l2.4.8 2-3.4-2-1.6ZM12 15.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4Z"/></svg>
+      </button>
+    </nav>
+  </div>
+  <h1 class="masthead__title">The Wordette</h1>
+  <p class="masthead__meta">
+    <span id="puzzle-date">&nbsp;</span>
+    <span class="masthead__dot" aria-hidden="true">·</span>
+    <span>No.&nbsp;<span id="puzzle-number">—</span></span>
+  </p>
+</header>
+
+<main class="game">
+  <p class="banner" id="banner" hidden></p>
+
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="Guesses"></div>
+  </div>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <p class="visually-hidden" id="announcer" role="status" aria-live="polite"></p>
+
+  <div class="keyboard" id="keyboard" role="group" aria-label="Keyboard"></div>
+</main>
+
+<footer class="colophon">
+  <p>A word a day from the <strong>GZAAT Gazette</strong>. Come back tomorrow for a new one.</p>
+</footer>
+
+<noscript>
+  <p class="fatal">The Wordette needs JavaScript switched on to run.</p>
+</noscript>
+
+<!-- How to play ---------------------------------------------------------- -->
+<dialog class="sheet" id="dialog-help" aria-labelledby="help-title">
+  <form method="dialog" class="sheet__close-form">
+    <button class="sheet__close" aria-label="Close">&times;</button>
+  </form>
+  <h2 id="help-title">How to play</h2>
+  <p>Guess the word in six tries. Every guess has to be a real five-letter word.</p>
+  <p>After each guess the tiles change colour to show how close you were.</p>
+
+  <div class="example">
+    <div class="example__row" aria-hidden="true">
+      <span class="tile tile--correct">P</span><span class="tile">A</span><span class="tile">P</span><span class="tile">E</span><span class="tile">R</span>
+    </div>
+    <p><strong>P</strong> is in the word and in the right place.</p>
+  </div>
+  <div class="example">
+    <div class="example__row" aria-hidden="true">
+      <span class="tile">P</span><span class="tile">R</span><span class="tile tile--present">I</span><span class="tile">N</span><span class="tile">T</span>
+    </div>
+    <p><strong>I</strong> is in the word, but somewhere else.</p>
+  </div>
+  <div class="example">
+    <div class="example__row" aria-hidden="true">
+      <span class="tile">S</span><span class="tile">T</span><span class="tile">O</span><span class="tile tile--absent">R</span><span class="tile">Y</span>
+    </div>
+    <p><strong>R</strong> is not in the word at all.</p>
+  </div>
+
+  <p class="sheet__note">
+    A new puzzle is published every day at midnight. Everyone reading the GZAAT Gazette
+    gets the same word.
+  </p>
+</dialog>
+
+<!-- Statistics ----------------------------------------------------------- -->
+<dialog class="sheet" id="dialog-stats" aria-labelledby="stats-title">
+  <form method="dialog" class="sheet__close-form">
+    <button class="sheet__close" aria-label="Close">&times;</button>
+  </form>
+  <h2 id="stats-title">Statistics</h2>
+
+  <dl class="scoreboard">
+    <div><dt>Played</dt><dd id="stat-played">0</dd></div>
+    <div><dt>Win&nbsp;%</dt><dd id="stat-winrate">0</dd></div>
+    <div><dt>Current streak</dt><dd id="stat-streak">0</dd></div>
+    <div><dt>Best streak</dt><dd id="stat-best">0</dd></div>
+  </dl>
+
+  <h3>Guess distribution</h3>
+  <div class="distribution" id="distribution"></div>
+
+  <div class="outcome" id="outcome" hidden>
+    <p class="outcome__answer" id="outcome-answer"></p>
+    <div class="outcome__actions">
+      <div class="countdown">
+        <p class="countdown__label">Next puzzle</p>
+        <p class="countdown__clock" id="countdown">--:--:--</p>
+      </div>
+      <button type="button" class="button button--share" id="btn-share">
+        Share
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4.5 4.5-1.4 1.4L13 6.8V15h-2V6.8L8.9 8.9 7.5 7.5 12 3Zm-7 9h2v7h10v-7h2v9H5v-9Z"/></svg>
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Settings ------------------------------------------------------------- -->
+<dialog class="sheet" id="dialog-settings" aria-labelledby="settings-title">
+  <form method="dialog" class="sheet__close-form">
+    <button class="sheet__close" aria-label="Close">&times;</button>
+  </form>
+  <h2 id="settings-title">Settings</h2>
+
+  <div class="setting">
+    <label class="setting__text" for="set-hard">
+      Hard mode
+      <span>Any hint you have uncovered must be used in later guesses.</span>
+    </label>
+    <input type="checkbox" id="set-hard" class="switch" role="switch">
+  </div>
+
+  <div class="setting">
+    <label class="setting__text" for="set-contrast">
+      High contrast
+      <span>Orange and blue instead of green and yellow.</span>
+    </label>
+    <input type="checkbox" id="set-contrast" class="switch" role="switch">
+  </div>
+
+  <div class="setting">
+    <label class="setting__text" for="set-theme">
+      Theme
+      <span>Follow the device, or pick one.</span>
+    </label>
+    <select id="set-theme" class="select">
+      <option value="auto">Automatic</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+
+  <div class="setting setting--stacked">
+    <button type="button" class="button button--quiet" id="btn-reset-stats">Reset my statistics</button>
+    <p class="sheet__note">
+      Your guesses and statistics are stored in this browser only. Nothing is
+      sent to the GZAAT Gazette.
+    </p>
+  </div>
+</dialog>
+
+<script>
+/* The words: five years of puzzles and every guess the game accepts. */
+window.WORDETTE_DATA = {"puzzles":{"startDate":"2026-09-15","startNumber":1,"answers":["DiK6cHE=","JRt3v2E=","QeiDgvo=","1IxSXrQ=","f/NhR/M=","yg4TF2c=","QmMeVfY=","wsyyD/Q=","RkE8FSQ=","FlK4HBk=","mBbqnOk=","vsxsUNQ=","ccNqC/0=","x0x+6ws=","PApY/WA=","6ijllEA=","VROWPj8=","/K6v2Ys=","P38gZ5I=","fd2mU1I=","E4F+uhs=","k0t4ABc=","0mHWu+Q=","GVnswNY=","yIdTd3E=","EkzO41E=","aXv72DI=","kD3A4Us=","aN0ZKCc=","IFrDkuE=","jX+gMpM=","QC1es84=","/bea9oo=","dFL6TdY=","dgKpwAU=","GQhFgBw=","Sx5IyR0=","56BBWz0=","a+vdMmc=","8N3vvS4=","M9RW7jQ=","MiWnP/s=","fgHBdb0=","+CLGnjE=","tfdnPaw=","mSAdU2Q=","N2AFAtY=","LLRop1k=","bSTwfhk=","/oouydc=","f6HzbX4=","0AU2Jt4=","gJKH6io=","iIsjVl4=","RUOh8VI=","YL9BK8E=","TBYBrsw=","agyaRis=","26fZOmU=","NpccQAk=","GpBx6mk=","tEaigU8=","/Hotsk4=","UJpUjuk=","KLMkNGc=","TZbyFdA=","WCxdklc=","MHnGeGY=","/n8RTaw=","EkxGYdI=","uSkv8Po=","exJRVO4=","NhtTGew=","oAi5+Hw=","9tozQl4=","LIvMwQM=","jTm5PqQ=","sjtnivU=","mps0EP0=","QrK9EKk=","AHMUtiE=","tNDt+y0=","Hvg1zHo=","iXQMNp0=","U24jbxc=","VMcP+ng=","CKY+9BY=","L6z3Kzo=","N+CXp0I=","0bfjC8U=","z+H7xQs=","AzzptIo=","NJanLJo=","3+b4K64=","DDpV9ik=","q0OcH+Y=","2qtApow=","G0blfKo=","uv214pg=","SAE7amU=","yz/g38M=","7eMOntE=","JfchSgc=","s3UsbJI=","m0l5RzE=","RKnnGqU=","eRWFElA=","2xC8y2E=","bbL4rjg=","nJc6KGM=","Qgv0ohU=","y6BQkHw=","BUIX6eY=","KqUO39c=","RVDY5uc=","4O2vFEw=","xc6s244=","UmfU7Fw=","r0yLI2I=","f6uqOP0=","05XqHWw=","EbKOqXE=","0DszZqI=","S71RuGY=","LkavgOg=","xColnA8=","Z4B+8V0=","zs6T0dM=","9WDFRdk=","1QW8Otg=","/ifYE9g=","32eSa9A=","gAKkbi4=","Gdqy3TI=","w1AdZ9c=","vy/18tg=","uUnj77E=","wVxcvyo=","DViYn/c=","Z96hBCU=","7p7GFDo=","Sh8UI6w=","Bpi560o=","Lo4FlnM=","yNwghRI=","nrCW/DM=","L6zdWMs=","lCnbp+w=","bdo9mVg=","MfndEaY=","6/DCwds=","7pa8QDo=","Tv8Tsnw=","RazTnL0=","V3/Td5c=","kKn2AKo=","paTCJk0=","xWbpm7w=","uZY6r4Y=","Pc9j11Y=","gL0PTms=","X/nGSt8=","ffeniEc=","8ct2rOc=","/YEgKj8=","iKDP6UE=","TzZ9J5s=","Z/J/O+s=","czVN3G8=","S3DYudI=","r62kwkw=","M3Khf1g=","aoi+SUo=","vKuaO1o=","ZHAxm/E=","ID8UixM=","WO+iJDY=","MdESHE0=","2jzUyjQ=","ixuDjg8=","lXqgtCY=","HoxlKVA=","IfNbIi4=","ZM5gwXk=","jCiL/cw=","NYzUE9g=","aIQBtWE=","JfZ5/oI=","sN6mRS8=","C0LoO1A=","fLMqCm0=","4GwG9i8=","ZkmaXnE=","OloJtNM=","nkVwBpM=","hs+dCTc=","MFilcyA=","jIzgo2o=","qDCuryI=","42Y0fCI=","q1diT68=","xlzb4Fk=","6W6jIyw=","WP/wxME=","ER4caKA=","LSzcCME=","tHailoo=","gyvUhN4=","TU4zYaE=","doCHZho=","SaTWTbw=","17TjSPw=","/RmlyPA=","WuJCCAg=","CYHNYUs=","PKPcskQ=","IeqnvXM=","DqLDBog=","1jtsxkg=","6ARC75I=","AOxvkOE=","mvYRt40=","5xTCm6A=","ErGdQXU=","D5bMFKQ=","tHSZUZs=","hB2NUVI=","peX8cr8=","FbSOBCc=","bJ9T8+Q=","7dBaPR0=","cNCcjPQ=","0s00ofQ=","mJE9SMw=","5XrWcEA=","HDYwHc0=","LTZ2uws=","KrBqRNo=","RlqOYFw=","X+QuEHg=","Jm40gq8=","toZVF8c=","S2KNKtg=","Qfea5Zg=","0YbsKSc=","DUHEWxQ=","6RzXRNw=","qQVJvms=","wyFDA+w=","+KJbUtQ=","iGV18Cs=","pG1ho1g=","6rzyF2I=","rrdE5ns=","Oukfb4A=","LbB338M=","LWJLIk4=","M4XNGG0=","NcZ2Apw=","/0TroH4=","n0vpdog=","KARGZvU=","Ufyp3zY=","D/cHsFA=","4GIgQzI=","ExCbQXM=","NrLIWSA=","NCzjqlE=","3P94nLI=","ugjVSiI=","ZADSFho=","V+GupgY=","vAdPlLg=","zFktXGQ=","VAAmn4Q=","9N4CPZc=","IMzu/Yo=","/wz1cL0=","wmvEf8E=","qsANHjU=","gHH4Ha8=","sucb+Z8=","EC5xK5w=","JUg62xY=","dL/Iano=","HWZyfCs=","/J24QTM=","sYL/j+I=","DPdMmVE=","ZmOGONM=","k5Z7EXo=","pZDHfk0=","sF7omNA=","SqexFFw=","DRlH67k=","GmiF5ME=","71r5P1o=","t2CxDzY=","z1rN3pM=","ybHt45o=","tV4fyRs=","db/EKv8=","wLVOjwQ=","uIO6oQI=","RbXTaYE=","4C1skOU=","MjWXrII=","WA8adcc=","Ulhze+0=","Z3Y4KG0=","5S4IP4Q=","iQLWHDk=","RRDN0UE=","ISK7KfM=","HheSnmw=","2UxV8u0=","4v0W4Lw=","whI5Sb8=","c1CwvlI=","7yrblrM=","OKFwW34=","pEY9Qic=","fPvPTp8=","OpFhJbA=","Bo4d/Cc=","rQsJEMQ=","1/j3KFY=","AsGft5k=","4jBFAcM=","Qrqg7mU=","nDM05o4=","6hp/S3w=","+k3uQzI=","d+PIyfM=","cdRp7XY=","/gVEFTE=","EPihtt0=","N+DSbVg=","eRQ5wT8=","CDJeEgM=","eNKErHc=","Hv0GZL8=","vIA4ZvY=","biEPMK0=","UpBsO1k=","w2qzUNQ=","BrIHg1Y=","/RcBqKw=","k+7/gys=","5bI6z30=","ySiGzsI=","ABnbb3A=","T5dcqTM=","qTmrs+g=","IFmZ1zs=","TWJH9J0=","plQXIa4=","IgW4N/Q=","XV4pWhk=","L11kcRI=","SAWkGxM=","aQS4U3w=","U2GBVBg=","FjC6AAA=","Ljrsq8A=","xnYDHs0=","jLmDruo=","30cN0vQ=","Kq/Lnc4=","4II6HdU=","MbNn21s=","sknvcWY=","CingeYQ=","Wydkmzw=","ZeHpO5U=","TIm86eM=","yqZTT+s=","m8NElT8=","l7NhDr0=","37KCE3s=","d4LUMes=","uf9RNLw=","BUgBVeE=","MWHGgPo=","UYwvuWE=","bhGQA9g=","uYos3BY=","SjDVpu8=","YVv3t4w=","XgmHaeg=","RihZe/Y=","/tA+XVQ=","z7ohT5M=","R121NA4=","up4yDe4=","tewgYrs=","9fvb0r4=","aRuuK2E=","+d29GXg=","87LfMIA=","TR6JPP8=","sB2eiAI=","Kn5SSRE=","hpA9erI=","MuEcAs8=","zVj4Chg=","DHilxY8=","oCNKUeo=","Odf+G8A=","Q4rC2Ho=","EVtYcFo=","NgsRjhU=","a8P0Lac=","DuNLUp0=","dAerbAY=","N0obrHk=","0bj0cKI=","LrObakQ=","V1ZiUdE=","lwCYLTM=","cjHB+AA=","dJaUDik=","OvXaYgI=","aPJIibk=","BB6It4E=","iZs96dc=","LLbaTXY=","bGr8ISA=","sMY4ICU=","yJRXGMs=","nu7Wfoc=","L5UImYE=","J8F5na4=","YQEqZNQ=","zalCaRU=","Ubs7/Nk=","+rJZzcM=","S/LtmRY=","YoO4c5g=","UNUXRIM=","sp8h2a8=","C3ZG7wI=","96T7pDM=","d/NfYzs=","nBCQUiM=","eXgCLPk=","0F48mE8=","c+81i2E=","V45Ha14=","mI0NEVk=","5m/yK9U=","vzhH5KI=","Lh6IUQE=","iQIw/AU=","EkSPDLo=","sbrkRjE=","CtbET38=","iinhj4c=","s17TmPs=","VKNpdvI=","ELSN3/g=","mr+d6Yk=","ymNnyeo=","/MwAzqw=","84J4SNU=","ybuuKqc=","BVtclfk=","vIUk1LM=","CPlSz9Y=","Ju0HVts=","8Wy8mAc=","xHtNiPk=","0iUWHD8=","4hMoSNQ=","SqVvJUg=","GNnLV28=","K3SrTIc=","T4ljRoo=","i0Dq8Y4=","Hnsvp1w=","oBYip7A=","Qrf5w+c=","DFexvVQ=","fl1LkWY=","3FrJrcQ=","9nEuZng=","2uIiYMs=","FqT4HVI=","NJmQP0E=","6Q/D0PQ=","p9hLf9o=","tMHYQPU=","nPSx57E=","7NUelZE=","5INfHUs=","ivGgAxc=","dzjqYjc=","KJQLKhg=","hq1EFZE=","dt5P4b8=","tjixWuU=","D4npL2w=","bnACnqg=","yJDDVOs=","Rc39WR8=","/zOCpwk=","b2KxZ1M=","lfRD1Qw=","XtP7a8k=","jyUWy9M=","5dD5604=","V2bxnhA=","cUmfzzk=","Yv9aVVI=","X1k5X7A=","ZVeeJ5w=","td0t+lo=","H3H2TLg=","AiSASpo=","I5M15WY=","9IEsdm0=","dV4r1GA=","nIZLq/Q=","FoALHWo=","e0KyrlI=","stmIM3g=","YRk0jdg=","QeRX+y0=","F0Uo90E=","fVEA+fc=","Gp0fwu0=","CrLLA1Q=","LRujDrE=","xIjDQK0=","WMqoQKo=","uwOOkrY=","/oIhS04=","srT4hnI=","1o6+MU4=","YMl/oFA=","y2ZSUPk=","6lUKkiw=","gafOuwI=","q1TMni0=","e7KB7L4=","dpsR5qM=","KJ38Xb8=","eZKHjRc=","ub8oy68=","ghiwbSg=","2dUx2Ak=","qhddZCc=","RuCSwmc=","BJW5Bx0=","zQpajtQ=","Ff0Y+7g=","uWPEuvg=","pLi/jy8=","zV5Jr64=","kx1mUdU=","V+tuakU=","cqIrClM=","yxppDC8=","KJ40XZo=","JOEpTPc=","3EjHRTA=","ENdz/Mw=","QQGdltg=","tqMcSYg=","sE0iKU0=","DTEVPAw=","t927VHw=","mX7DXZw=","QC0USzk=","ZQtpHwU=","X1NxYPI=","MrKeQWI=","I0+iPOg=","jPPUPT8=","ZUKAuHE=","Tm6nFOI=","4+9fw48=","0IxCykY=","WDZKyHY=","H1WjxVY=","C2WV8xE=","JRmV/8A=","5j09lAM=","XGdunxE=","9IUgDV8=","qgyN1aM=","MqpCmKU=","mb3ZJEs=","KAy1Q7I=","bMo+44o=","zjA8o4Y=","4ENgsns=","v2co0hY=","zpzzbmg=","V+cnmmM=","JxjUt+8=","mInMXRQ=","TYoL8Zw=","D46wHpI=","WUozq7Q=","I7f2ubg=","1UQ4+ZQ=","uL1ICR4=","3kSYs2Y=","EesCoiE=","fL2mp0Y=","brloJRA=","tR5tlpk=","6Upr0SE=","G5L99dY=","kgZbpJE=","nksRpAw=","yECQXrI=","o0xMY2I=","BMmc6pg=","1FQ8KEg=","tfsj2Dc=","lokd0Fs=","IGZN60U=","EWQavDc=","wA2rOYE=","h9kjgq0=","35asK1U=","JXRcB+E=","74s5Vi8=","1BQQ0Wg=","AVDyNxo=","3ZtLm6o=","XWjf4ys=","ggs7Dkk=","HMYusE8=","eAgDlPs=","BlDU2Og=","WrchZoM=","cZZk4YU=","GHSxQ/k=","E1RaMIw=","sUPvEoo=","kTMTb/4=","mPuiIsQ=","4daJCgY=","I8dMppE=","hvMV4l0=","mKNFaI4=","z3Mx72s=","BRlXux0=","r3rJKNE=","8rFgg1k=","AexQmTA=","tnJSe8o=","lHAutUk=","zbKdA8M=","v+xYKHg=","YFw3NC0=","bUbRXoo=","O8MQquQ=","pnjmsaE=","eGf8+5Q=","6oZbibM=","JEPMNbI=","1nmZAeA=","26mj6mw=","JwIMmZA=","yN5S9rQ=","AeLwQCA=","ciFO9wc=","qPLvF6g=","XA4GTDs=","uXy8SGo=","Hz4X26w=","OGBapr8=","5nKtC5w=","bK2Ayxg=","KQdXC7c=","Ivcnajw=","Lrxg9Pw=","i1Hq3SU=","z1PijTQ=","TQgQp9A=","eblWLsc=","v1MGRqs=","lVvhL4E=","ko0CjQw=","1wCkQuI=","uBnllEg=","Sicdsos=","huGezBo=","BP6At/A=","BWNpq3Q=","5KndA3A=","XySe/5A=","DPAlTxc=","WByKNqc=","f8Ms7Tg=","bf58htg=","PmPnWI8=","ytEtIN8=","R2qRrns=","sTbFeoc=","noWXcck=","iJcgsDk=","6TNzL8Y=","xpV1+R0=","18c97Ic=","5vEoTmc=","Pzqq+nY=","MavdGrw=","W0IUt8Q=","AfjRWgo=","idMO+KI=","Ji5d2Ks=","pCFstuU=","EedzfHc=","zuyuxeY=","+8ixDQw=","3m2BmO0=","dSsQn5A=","BLkeGUs=","Pc5u+wM=","6kroOn4=","xngkSwk=","6uQmTr0=","a1RRZVY=","OCD6EaA=","4pR9jnM=","My2diMQ=","eqOG5Vo=","3gf+7pc=","nOG7irc=","lL3EnJQ=","qeykLWk=","Zmw7hDQ=","DsAFCy4=","5f58zK0=","CxUqRgw=","JW01Tdk=","i5NVfGs=","FzG8WBM=","usLv+EM=","YWTH3SM=","ZRLap3E=","isBImoI=","HMwNzW8=","cyPW4kk=","zRYrZLg=","+Lgh4+8=","7qq6Iro=","wB/MPlk=","IXsbDs8=","vy1/HdU=","RKARUTI=","KErgbqU=","9BEQKB4=","FlgPsZ4=","S8zmt6g=","kwVBDQc=","vdGVV50=","fxBqkrM=","6w1RKzw=","TWZxTFU=","yYaUix8=","Q/InGYI=","IbmJoPk=","9DwOdog=","fYCzDhI=","sjlbHqg=","BfsRan0=","9CZUEFE=","/g2mdi8=","m+1mx1A=","6ClF5fs=","LfzLQOo=","nR2HlQk=","ycQOKzo=","Jx3q6Xg=","Z5dhJTs=","sKoxl4g=","BNKTh7s=","0OWy74I=","I8vvKKA=","zGoMMG8=","XxkkU7c=","S80QawU=","Q4ZTYo4=","sCYOaq4=","s3YEs2c=","VWA5HzU=","bcVIHck=","USx8wYc=","ptm0n6k=","vGDPFXI=","2II8IvM=","xy5m2NU=","a5cLwxo=","xa74SsA=","b1TcpNk=","w6aUBJE=","DGNuNFQ=","fTsn4z4=","l+GMWyQ=","RSuWc6c=","DuAz1CA=","X27/2+Q=","iUmfmt8=","Orq+vl8=","RFFSksk=","rgWcj8g=","ENj+3Ys=","sy6Ub3I=","+SlZyNo=","YJqetB4=","rxA+atM=","h9Z97zU=","Aa1ptrQ=","dg5F4+o=","mh5LODI=","DOHflgk=","jau79ic=","IRtRRGg=","ZeMTM9s=","SphO+LQ=","5S8K49g=","8JP3aAk=","T5TTQNo=","1rn/udQ=","eczVvZM=","Y5CgGco=","cF6d418=","qrOODK8=","1FKCoMs=","7WGg9zo=","hINczqE=","nu7kLDg=","ewkWCIw=","VIF27ls=","/8ndcjw=","7q7cAXQ=","5+Kwggs=","hYFsmvk=","UiCQM/k=","oYd6OC0=","ieZhNuI=","ytCaYTk=","fNxZ3yM=","dgQs7Qc=","TKZS+uQ=","sJcqWF8=","os8+ioY=","xepwcII=","qRSBQwg=","o8osZiQ=","WSfjORw=","upr7Bus=","5U5kpMo=","Baz1LiE=","U5FMm9w=","uRC1JoI=","oESZ+Oo=","vbbFTvw=","0SnAxzM=","xUhKI8M=","vA+Fz5A=","OCjazqI=","MNopBj0=","l3A9WyE=","O360998=","me6Mm8g=","asD/X0U=","9fmPQto=","S0jwWQ0=","enLMEio=","AYsuI7c=","6L5Ifx0=","GE+cMTk=","hWdX8y4=","ImyqLrU=","gYfWHQM=","DVqdHSM=","SO3Zt8M=","gxYqC4g=","ss6rMpM=","b8+t+f4=","h9Lw9Pk=","MoVvDsA=","yFPtnEw=","+OGdhq8=","5NpRWwY=","Gc4v6JA=","9auk9nc=","i1RQ2vc=","b6PpP/c=","6OGSPuQ=","nc9IeXw=","cPkst/0=","TLM9M34=","vVf3ekQ=","D5IsvfI=","pbVpjWc=","N7ZPhRg=","SYEhRKk=","cZlhn1c=","EHGsNTk=","HEgVFDA=","M0HneQg=","nK4mZ2g=","gv1U5Rg=","jgZzmZI=","YzNsJTQ=","NSfnxoI=","aiIHcoA=","AzFWVwI=","lsOncM0=","Fd0RV/Y=","gp87lLU=","mj7Q5ak=","dhq0IDg=","0+HJZLc=","iVcT49o=","+xiDti8=","lvx5kaI=","07vbQMI=","ZrFA9yY=","WTMsJ6o=","gev3Atk=","ERuevGU=","uLPXvQI=","bvIUxI0=","0B6M6sk=","QpOlJxo=","xbBWhxg=","OQy0msE=","5z3vXUc=","gxQREnA=","IHMTDos=","p0UWQQs=","C/dlUts=","0vjHrYQ=","R4vJ8hs=","3nSG4Uo=","awyLm4Y=","/OUwJh8=","N/kC9N8=","wBdcWNQ=","WZTyMYo=","7yjk0bA=","9HG91zM=","U4V6FXY=","ApIA3H8=","J6LUg+I=","ncehjpc=","BbrAKiI=","qCDIL7E=","fdwl92o=","ETDryFM=","44A8mMk=","tI7lKHU=","ME3XgcY=","fUP2pUk=","CgDruk8=","AkS6KIM=","/8reZGs=","MwFM1Wo=","4XLLJVE=","TXyvFUY=","K77VH3w=","wFwN0x0=","nAOdBtM=","9pKDlgk=","l732ZbE=","yRoD9nc=","/U9tAJE=","vbiCruw=","FITTWEs=","v4VIfOg=","MHEwrQY=","vVDwC6A=","FawW2kk=","dVLBcTs=","PyKtM9Q=","9jhmlE0=","Aa63Kb4=","nvGn9ko=","FAJ0X1Y=","mMbldtc=","ik6MX04=","peTIXBw=","jT05loc=","azUMPYw=","V8saGrY=","E0uby/g=","vfdoieU=","ywcZpLQ=","im8Hc3w=","0bCyxOc=","LkLMHbs=","37wCo/o=","8o0Dbjs=","uECN0Rw=","AwHyjgw=","Y9fzrBA=","MbkbRLA=","v/KIMfA=","KBwMBok=","slxBiW4=","i14+qKY=","9MUDu5g=","1ID9yA0=","BF53Dy8=","6hvlLxU=","XhLWBNo=","FFdI4yM=","GADon+g=","jzvrKcw=","l4dpJaM=","oLO4ReQ=","87R15FY=","VTHA/VM=","5aCcFKs=","EcAIC1U=","ZzThOM0=","sMkAurU=","XjTEGf8=","Qa7zbOk=","/Z6Yx4Q=","82AUSEk=","FQ9NXWY=","kJ10jrs=","yFzNLyw=","XAV28gY=","0JLlfRo=","REvVsYE=","S5xZ8BM=","1usiqNg=","3410H9E=","EJSzIGg=","+FHuVFo=","4mwAJj8=","j4XCl0s=","HcM+pLk=","BJKwwdE=","ZaGJ8xQ=","rDNhfck=","4rSwAsc=","sTd4/KE=","vtdrux0=","jbPJug4=","7YzCpfg=","Jl5gHkY=","crFI5lc=","atx/a88=","Q+gvtAk=","/X5JREY=","bAiR+ng=","L7Tr+xE=","UGaHY+4=","fQO1YJA=","3D6gmA0=","6AfmoaM=","rP/iScg=","k5LRSrI=","79VK2OQ=","vtVUY5I=","9/+PDg8=","q2cgzvs=","iZLcOas=","RaBrgHk=","ZOMm7ng=","1t1ez00=","PK3szwg=","w67vBo4=","Amdc6js=","e4imQvU=","d2qTCJs=","RmuKo4Y=","uvkGq6U=","YT+tAhY=","xlNa5LI=","zO3sZzU=","f+o+beM=","q22IxxU=","pQOaZwA=","6Tol1fQ=","X2h6oUA=","xzAILAc=","4Nbdib8=","fJ5J9v8=","zW+Msec=","eXUxnuA=","8dXx3/Q=","ijg6dpE=","sjRnvr8=","cPX4Fbs=","x1uHYtc=","nZYbwOc=","qF6Rn6M=","kkdYNws=","Y1VzFx4=","nHw01S0=","cNzK0uw=","5aD2oDY=","mJMgi4k=","1xKgWcA=","93adcgI=","Z9JMLeI=","AUy1bKY=","ZaVSUCU=","kRh9Dyk=","P2VUG2k=","+cd0TSc=","xmcIWdY=","7y0QODI=","GcTbdgg=","bmcz5cg=","BYHWzUk=","n0V9/aM=","y+SmIBk=","14qwhgg=","buyhge0=","KvYwZkM=","Az20y/I=","t8FLhEc=","Ft7cp/k=","UQO5KCs=","Z139Ih4=","JKHFOFI=","2XWTT3E=","UdJcA3c=","R4UMh7Y=","Dt8s0qA=","JG0nr4g=","Qxw3SqE=","DdW78ow=","1inGLKw=","Gu5v7j8=","xx+qaSI=","V0+Yccs=","OnJTUnc=","eOrIhiI=","5wdF7rE=","M/mkWOk=","97lRvYk=","3h07PDI=","ZQaMMTA=","1L5lwe0=","td3rFFQ=","yzMZNtk=","g1hL1hU=","KEnm9xY=","opTdQ7I=","NdrWjkM=","g0Bqbis=","X0SCU0M=","LuxHrPk=","MaIotcg=","rtAE2UM=","fyqQeoM=","hfJUfGg=","Cyds4fE=","BhDs5Pg=","GClF1mk=","Cm/CsPU=","7J8Emuc=","xZ1Uyos=","6BVW0yY=","H0S+7RE=","QFW/sRw=","Qy25AeQ=","m4GsIzQ=","VGBQ46k=","/++OpPE=","0+4nysg=","gzGgbvg=","/6cW5Fo=","H1rDQww=","6441ka4=","ZyO+m/4=","ADuH4iU=","zT23tq8=","SPm1F6Y=","o5b5DY4=","MRfD0VA=","nCSKfYc=","TWx5mPc=","gsQVlrg=","PGwkfs0=","Ro7NQkw=","nHgg0TY=","Uq2qfDc=","hD+buB0=","3yRJCrU=","RZWiG/E=","M9tZ8Ro=","mmgSP9Y=","1KOMmOQ=","9CTX1+k=","+PseGuE=","ZTkw0GI=","8G5ZVic=","eFfRCkM=","Owirq7A=","t42Kc3E=","WdOXbas=","w3rYnX8=","4y2ThEc=","p5EOTA4=","X3zE+F4=","zQ9XlRY=","htTDKTo=","B1PF/lw=","ab7HQic=","xXvi5Ts=","VT1ulns=","1e9iUEE=","WKon0Kg=","P2CF3vY=","5Un1mc8=","xogh16Q=","rWjaYHI=","PNipTqc=","J61TMZY=","Y9vEQwA=","ytuy+Ew=","zRLtxDY=","OL1WFFg=","ybwXjVQ=","6Mc4jz0=","XxCAad8=","b2f09ds=","L3tWF8M=","BgdjGbY=","BUOoh7A=","WUOiNcU=","EyabKhY=","W6A1//4=","hTOiwG8=","h0aq3wQ=","/Xpr5a4=","lUkeUyI=","MLV5dok=","aVhX13Q=","xpWUr0A=","+pDvEyw=","GfJ3ZPM=","cyH7VTQ=","EaYgbEA=","swxgEh0=","JX2OWHw=","YbsX+0E=","7+GZMeQ=","aaDDpg4=","c+2w3x8=","zOf8a+g=","rKkcM0E=","J4XFmfg=","fqk4Lkk=","gCUbMUI=","mnUN+3Q=","3OmXOjU=","RiexNzk=","A6cKUGU=","YohG65s=","+M77iHY=","njRJJqw=","3L+uZn4=","tbWbrAo=","6LtNArA=","sZCUW6k=","DF7kCfY=","N5gudLA=","UXXbViA=","FbFPW3M=","5lKe5iM=","tUB1HZU=","E0MaMJc=","kpxG6ZU=","XrUKIQI=","aDSwpL0=","o+oBHBQ=","4Boz4do=","cLP0ooc=","3UqMlD4=","eTay+kI=","/a0YX60=","5cMz3jk=","3Nt9B8k=","34L3b7s=","EM5OaEw=","ciKsV80=","PDM1Ih8=","ycrF/8M=","R+T9WQ0=","CCdm6js=","ONQtgGE=","+RK7Mnk=","eskCCMk=","EDzEpKc=","ja9D508=","CvoKf6Y=","QC9BheA=","7zEut/U=","nD+kA5Y=","Wv4Rzgk=","mmvepdI=","2bBJG/A=","8n/ZtDc=","9x/MnbA=","AbMksIc=","XZaTDGc=","CF+wfQs=","4q9ayeo=","TvugqBg=","eUVeo48=","LEnITjo=","yhjUXPM=","NjcE0D0=","QARzFpE=","6eoATAg=","s/7vZEw=","DDTsVLI=","NT4GPYY=","wVWFO2U=","pLllBPk=","9Am4Ekg=","BPNJNOU=","vc/LaEg=","B/CyVmw=","wqd+Me4=","bzx5L2k=","iioRRCc=","3rCbhWw=","JQdTCUw=","gvc6rfQ=","S/Saxuw=","ZFP5UkE=","NrLTyqw=","empCapw=","XAMhk6c=","7gysPU0=","4DBRRzg=","pa37i8w=","PoBfjeM=","chewCBw=","R/CmU5c=","UbDk1EQ=","UMe2ARU=","Luj83gg=","n1CwpFE=","tteXKxs=","Jf3TOws=","EM+OaoY=","rL1MDCA=","xoJ8JVA=","FtUJRYc=","p21AQvc=","qZb2lWY=","KNOQaAw=","0mNh5YY=","kO3OOXI=","Y+7VxyA=","y1K11eo=","LVGNe7E=","JpQqOI8=","z320pCM=","vjNywiY=","cuJE4v4=","NDDlUHs=","7vkGVVc=","BC2SncE=","jSTWLEg=","0uxykcM=","eSWs6vo=","K3uTf/o=","kIjvvTA=","DcJPwsM=","afPYE0A=","XI/nDiI=","22DpkeQ=","CuRTXzc=","Dc/7fgM=","QBFoyCo=","43GgKjc=","zHT7bUM=","VPPxR9c=","hvH6EfU=","p41iTds=","xntT7RU=","/2IOqaU=","LFd9+so=","qPMfwwU=","dzO6f60=","QuVpPsM=","aK72InU=","19YC3u4=","YWlCNPo=","49Uw3Lc=","RM6tZF0=","Xe5aBzg=","HHH3ydw=","C2VUFp8=","rt4Yhqc=","jOcSTXg=","wSyS80M=","nDBHdco=","ZNCEPe4=","/Brlz/8=","ryxRdgg=","yzcOT5w=","Q+CfBCc=","8YIxzPE=","mxwY3cY=","NPNGxQc=","2iMhr44=","5Zm6Voo=","cvDSgyE=","sOdZnwU=","gFg8mvA=","cHFTNEA=","86Duckc=","je6VtJM=","9xleCOo=","+bzlhuo=","KGtMQms=","ej2p3H8=","IuI8Z0Y=","OSp3cMQ=","h0DLbv0=","LJgTEdQ=","E+cXFhA=","evvQvcE=","OteiEPU=","039GCiM=","/A1OHfg=","p0hSLfw=","Alebm/c=","LL8f6k0=","rfdMa7c=","KDKJXDg=","umMIJm0=","zhPdK6g=","mPS07Tk=","B15LUeQ=","WYvF6c4=","btoahuc=","gTrEMrg=","5IsZqKo=","uTvBfQg=","m2iU1Ug=","DDz/t2s=","G171IJ8=","4Rl4SVc=","Vfm9hxo=","7VjYCos=","Z2GODJU=","3mGzJUg=","PO95zkg=","eib0YnA=","olZE8t8=","inmlBZA=","MZ3CtGM=","cZ0QD8M=","6zTQaAw=","sj/QJBE=","GE0stn8=","DtipTuc=","mpYCC4U=","ufiXaUo=","FATCzhk=","2awP1xI=","uZN5J6c=","RFTWmbo=","ChVzPfI=","YeepBtU=","n7aVL7U=","T7bz69o=","sBuCCNI=","yyPOouU=","Qfk1CII=","S6BDDrI=","H6lD+Bw=","rAw//sg=","erdAPBE=","v32whoo=","+X4Cao4=","VmK1Vo0=","OkYPO7o=","AtUNJAE=","t21/x6o=","NiAXTOc=","b3O2E/s=","NcHFD5s=","3ZnjPhU=","7fKBxjA=","W7RMHPw=","6oJUP6Y=","V5Yg57g=","W8YISvE=","9wsk8u0=","uh7lVkU=","XoaZHFA=","om9btwI=","0g5c1N0=","+3l42Kg=","YwofFDE=","k0oiBFY=","39AYvlg=","cHKLGPs=","tStDnRs=","Zf7MWjo=","LbfDJFo=","Vnpml3U=","ZJAPAms=","ogWV3Qs=","NNSkG4w=","bbKODWk=","ccW/EGc=","2enHugo=","+PPb7H8=","q5dIhyA=","AzE+8tk=","FGFL//I=","vt1n2Dc=","eUbOFOY=","ia7OB6Y=","mXDh9Sw=","rsWaM4Q=","Mbeptjk=","rBcfYhU=","0ej41sY=","5LoGsEU=","Jh5E1o8=","XoHdX4w=","7bCB/VA=","rrpDvP0=","RHDkH/Q=","D3LL3FQ=","nTycU7M=","7AQzAlY=","ppSO1KQ=","ViBE38Q=","wwGBdHs=","2W38jCw=","YkWfLVA=","twpMyo0=","ed/fcIM=","eg8d++I=","FIIRajE=","OKvR3QQ=","nB+Cz3Y=","Xf+2Myw=","ZqTnPwE=","nggDO9I=","YNtwTFY=","zOIuusE=","hdB7hlQ=","+tkR0GA=","oQqbaE4=","CKAEoGs=","yzC2Ya0=","0ptk8P4=","mF3tWd0=","tnbtmhM=","GdKdcKQ=","OSj3CUQ=","A46AHL0=","ctSoWbk=","J2ceqZw=","IhKMqCk=","4QS69rA=","ZE9sy+M=","tOAY0Kc=","ipVQA8Y=","n1BE5v0=","kPSgfBQ=","eAiLHGc=","aOC8MNg=","DTenAc8=","kNnLs5k=","U9vN6LY=","yT5tiZQ=","Ee7hM5c=","w8jxerE=","6WW48Kw=","2w6z5ww=","frTBE6M=","3qdf2Mg=","q7FH+BI=","aXvmBLY=","yXR9IRM=","QKZikQ0=","U16hxWE=","+aPSAKs=","ILw1uYg=","QYC+/JQ=","WboZ2xs=","efD0yCs=","wuS8atY=","6c5yt8s=","UdDUmMM=","uFJ0Fbw=","5cXfy0o=","hPIHmNo=","KoE6mJ8=","fx0//0E=","WGIJ8zU=","s1RFj2Q=","B03hKiw=","7+kSKvQ=","v0Lc4Fc=","WkO6mhc=","8eDREZM=","Mao77+s=","b5ht2mY=","lshK8QY=","diK8r5s=","sM3JlMY=","MROmlPU=","Uh0D9fk=","HwjTR0s=","NwBsP3s=","3s86WlQ=","WI0Qn0c=","Kn7QKzo=","zQaVKgE=","AN8AmA4=","cq6KgfQ=","S9KDkyg=","xH+Erfw=","zUniol0=","I5I6r7U=","a4zJBKs=","3hBtbtw=","P/Qw3uI=","vXTONmI=","2JYcD0Q=","egF+G6s=","FfyMMiw=","avzWWqg=","5r6oRbo=","kL/dtlk=","Oti3Lnk=","KM0p/jY=","gXx5lXk=","qO/Xij0=","jE2kgME=","xC/K+PI=","DeFnSFA=","v7zVQis=","YYqIkqA=","HqNWqRw=","r9Vh12o=","CTEF/tg=","A+mCj8s=","JJa0oho=","+wsjcHc=","8bw+yqw=","HGturpk=","N0qczFI=","a0hGavQ=","MKkbCOM=","4WKAt+M=","Euw8P9Y=","aAHwg7Q=","id9dzvs=","ai62DCo=","DvzxN8I=","VW9h/Js=","/boLf7s=","dMEYd/k=","OAg+EL0=","l7Io8+c=","07V7TY4=","Pg+Rxl8=","dp5z+IY=","aNM88ww=","GmTwv50=","QbtlGLU=","nOSJnOw=","pM7FUCc=","KXSSn6o=","Ed7+gFc=","2+iDO1Y=","guKecFw=","+u/yuWw=","8b++L6o=","UEv4Z4g=","PWeB3xs=","29Ntz8c=","xKNj1ao=","MVBhv84=","huItq6o=","Mz7i0oQ=","5amWWDk=","wHDfqzo=","YmhGlpg=","c/KvpN0=","CBVym/E=","Yo1WI7Y=","sTACXWk=","C+rACpw=","rdiYo0U=","iPzm72I=","Nb+q6ng=","OtOtUHw=","blMllyg=","PdeUHsw=","hmHbl/E=","ehsZDPI=","L86Fvt8=","gsp8OOI=","bx80Tto=","fRKcIU0=","alHXooY=","ax4sv2M=","8d2G7nA=","EYkC8t0=","ctjKEIk=","i7ZoFNI=","IfTdmQ0=","Q+eWBwY=","Y5vCOeY=","9lXt6nY=","4zDJYfM=","ftlO/9Q=","8I4jj+8=","ShbSxa4=","xFxsOAw=","bL8uBhI=","/onxp7g=","vrqO3D4=","20x28qI=","QlscpfY=","vKzulF8=","uWaCV5E=","Al/VdRg=","WN5iIbY=","ZWsmL+A=","R1Wq8E0=","uafpSW0=","P/o4cDs=","0tN+vBk=","4uAA+zg=","lxBfQYE=","wXmopzg=","qYhrhRI=","pFVCthA=","IHKTG6o=","HRnp2Wg=","dvga/vg=","L41/qQs=","jPxZrlA=","mYXZIaQ=","llpR724=","GwLEk5s=","E1rvMsM=","/8hxtU4=","K1rkdDk=","FaFQSbU=","ZKNw8pc=","XYKCKTs=","+iH0VtI=","MHAPQds=","mGghbww=","mJYgqpw=","Zm7wn4A=","au2UMqA=","azG/wiA=","oB/Zaj4=","WPkxS50=","wGRIiE4=","O1A1RcA=","hq1xZdY=","wT+PE1U=","BSNiufA=","z7Kxuto=","A0AVkEc=","DRliFyM=","NGk20UQ=","n50OIlY=","Qie5eAA=","+y/nS7I=","mMPw/t4=","SDcCQpc=","ocCciac=","+wExOTw=","iD52s34=","UOXlDXM=","Z0s4eLc=","atSAA8s=","bsZ+NnU=","yqVySr4=","wN9b8QE=","g0T2Luk=","6nofPE4=","7gUSaeo=","B1dAMwI=","HCOcycg=","uIndqok=","+URmHgs=","FUprjDY=","7ttCYlI=","6K3Dimw=","n1IUvVE=","1kP8eBs=","/FrLTfE=","8+OCCIg=","xFzLmY0=","aNX8+4M=","6OEjQjQ=","SQbCuzU=","A4NxYts=","PuJXzso=","sKsNRiU=","kzPatEE=","TIkupuY=","0iNtI3I=","4V7hoIs=","7lBr6JU=","P53yKqU=","2Sg4TNE=","tPqb8Ps="]},"dictionary":{"wordLength":5,"packed":"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"}};
+</script>
+<script>
+(function () {
+'use strict';
+/**
+ * Everything the newsroom might want to change, in one place.
+ */
+
+const CONFIG = {
+  /** Shown in the header and in the text readers share. */
+  name: 'The Wordette',
+  publication: 'GZAAT Gazette',
+
+  /** Change these and re-export the database if you ever want a 6-letter game. */
+  wordLength: 5,
+  maxGuesses: 6,
+
+  /**
+   * Where the game gets its words.
+   *
+   *   'static' — read the exported JSON files. No server needed; the whole
+   *              schedule is in the page, lightly obfuscated (see cipher.js).
+   *   'api'    — ask server/api.mjs for the current puzzle. Slower to set up,
+   *              but tomorrow's word genuinely is not in the browser.
+   */
+  source: {
+    mode: 'static',
+    puzzlesUrl: 'data/puzzles.json',
+    dictionaryUrl: 'data/dictionary.json',
+    apiUrl: '/api/wordette',
+  },
+
+  /** Appended to the shared result. Set it to the page's public address. */
+  shareUrl: 'https://gazette.gzaat.ge/wordette/',
+
+  /** Swap these rows out for a different alphabet or layout. */
+  keyboardRows: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
+
+  /**
+   * localStorage key prefix — bump the version to reset every reader's data.
+   * If you change it, change the matching key in the small inline script at the
+   * top of index.html too; that one runs before this file is loaded.
+   */
+  storagePrefix: 'gzaat-wordette:v1',
+
+  /** Animation timings, in milliseconds. */
+  flipDuration: 300,
+  flipStagger: 240,
+  toastDuration: 1400,
+};
+
+
+/**
+ * Answer obfuscation.
+ *
+ * The static build ships the whole schedule to the browser, so anyone
+ * determined enough can read tomorrow's word out of the JSON. Encoding it
+ * stops the casual "view source" spoiler, which is all it is meant to do —
+ * it is not encryption and nothing here is a secret.
+ *
+ * If you need answers to be genuinely unavailable until their date, run the
+ * API server (server/api.mjs); it only ever serves the current day's word.
+ *
+ * This module runs unchanged in Node and in the browser: the export script
+ * imports this exact file so the two can never drift apart.
+ */
+
+const SALT = 'gzaat-wordette-v1';
+
+/** Deterministic keystream for one puzzle: FNV-1a seed, xorshift32 output. */
+function keystream(puzzleNumber, length) {
+  let h = 0x811c9dc5;
+  const seed = `${SALT}:${puzzleNumber}`;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i += 1) {
+    h ^= (h << 13) >>> 0; h >>>= 0;
+    h ^= h >>> 17;
+    h ^= (h << 5) >>> 0;  h >>>= 0;
+    bytes[i] = h & 0xff;
+  }
+  return bytes;
+}
+
+/** word -> base64 blob, different every day even for the same word. */
+function encodeAnswer(word, puzzleNumber) {
+  const key = keystream(puzzleNumber, word.length);
+  let binary = '';
+  for (let i = 0; i < word.length; i += 1) {
+    binary += String.fromCharCode(word.charCodeAt(i) ^ key[i]);
+  }
+  return btoa(binary);
+}
+
+/** base64 blob -> word. Throws if the blob is not valid base64. */
+function decodeAnswer(encoded, puzzleNumber) {
+  const binary = atob(encoded);
+  const key = keystream(puzzleNumber, binary.length);
+  let word = '';
+  for (let i = 0; i < binary.length; i += 1) {
+    word += String.fromCharCode(binary.charCodeAt(i) ^ key[i]);
+  }
+  return word;
+}
+
+
+/**
+ * Calendar-date helpers.
+ *
+ * Puzzle dates are plain `YYYY-MM-DD` strings with no time zone attached — the
+ * word of the day changes at midnight wherever the reader happens to be. All
+ * arithmetic here goes through UTC so a daylight-saving jump can never move a
+ * date by a day.
+ *
+ * Shared file: the browser and the command line scripts both import it, so the
+ * schedule can never be read one way on the server and another in the page.
+ */
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isISODate(value) {
+  if (typeof value !== 'string' || !DATE_RE.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y
+      && date.getUTCMonth() === m - 1
+      && date.getUTCDate() === d;
+}
+
+function parseISODate(value) {
+  if (!isISODate(value)) throw new Error(`not a valid YYYY-MM-DD date: ${value}`);
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function toISODate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(isoDate, days) {
+  const date = parseISODate(isoDate);
+  date.setUTCDate(date.getUTCDate() + days);
+  return toISODate(date);
+}
+
+/** Whole days from `from` to `to`; negative if `to` is earlier. */
+function daysBetween(from, to) {
+  const ms = parseISODate(to) - parseISODate(from);
+  return Math.round(ms / 86400000);
+}
+
+/** Today in the machine's own time zone, not UTC. */
+function todayISO(now = new Date()) {
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return toISODate(local);
+}
+
+function weekdayName(isoDate) {
+  return parseISODate(isoDate).toLocaleDateString('en-US', {
+    weekday: 'short', timeZone: 'UTC',
+  });
+}
+
+/** "Tuesday, 15 September 2026", for the masthead. */
+function formatLongDate(isoDate, locale = 'en-GB') {
+  return parseISODate(isoDate).toLocaleDateString(locale, {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  });
+}
+
+/** Milliseconds from now until the next local midnight, for the countdown. */
+function msUntilTomorrow(now = new Date()) {
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return midnight.getTime() - now.getTime();
+}
+
+
+/**
+ * The rules of the game.
+ *
+ * Nothing in here touches the DOM, the network or storage, so it can be run
+ * straight from `node --test` (see tests/game.test.mjs).
+ */
+
+const MARK = {
+  ABSENT: 'absent',
+  PRESENT: 'present',
+  CORRECT: 'correct',
+};
+
+const STATUS = {
+  PLAYING: 'playing',
+  WON: 'won',
+  LOST: 'lost',
+};
+
+/**
+ * Colour one guess against the answer.
+ *
+ * Repeated letters are the fiddly part: a letter is only marked yellow if the
+ * answer still has an unmatched copy of it left over. Guessing SPEED against
+ * ABIDE marks the first E yellow and the second one grey — ABIDE only has one
+ * E to give, and the first guessed E has already claimed it.
+ */
+function scoreGuess(guess, answer) {
+  if (guess.length !== answer.length) {
+    throw new Error(`guess "${guess}" and answer "${answer}" are different lengths`);
+  }
+
+  const marks = new Array(guess.length).fill(MARK.ABSENT);
+  const unmatched = new Map();
+
+  // First pass: exact positions. Anything not matched goes into the pool.
+  for (let i = 0; i < answer.length; i += 1) {
+    if (guess[i] === answer[i]) {
+      marks[i] = MARK.CORRECT;
+    } else {
+      unmatched.set(answer[i], (unmatched.get(answer[i]) ?? 0) + 1);
+    }
+  }
+
+  // Second pass: right letter, wrong place — while copies remain.
+  for (let i = 0; i < guess.length; i += 1) {
+    if (marks[i] === MARK.CORRECT) continue;
+    const left = unmatched.get(guess[i]) ?? 0;
+    if (left > 0) {
+      marks[i] = MARK.PRESENT;
+      unmatched.set(guess[i], left - 1);
+    }
+  }
+
+  return marks;
+}
+
+/** The strongest mark each letter has earned, for colouring the keyboard. */
+function keyboardMarks(guesses, marks) {
+  const rank = { [MARK.ABSENT]: 0, [MARK.PRESENT]: 1, [MARK.CORRECT]: 2 };
+  const best = {};
+  guesses.forEach((guess, row) => {
+    [...guess].forEach((letter, column) => {
+      const mark = marks[row][column];
+      if (!(letter in best) || rank[mark] > rank[best[letter]]) best[letter] = mark;
+    });
+  });
+  return best;
+}
+
+/**
+ * Hard mode: every hint already revealed has to be reused. Returns a message
+ * explaining the first violation, or null when the guess is allowed.
+ */
+function hardModeError(guess, guesses, marks) {
+  const ordinals = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+
+  for (let row = 0; row < guesses.length; row += 1) {
+    const previous = guesses[row];
+
+    for (let i = 0; i < previous.length; i += 1) {
+      if (marks[row][i] === MARK.CORRECT && guess[i] !== previous[i]) {
+        return `${ordinals[i]} letter must be ${previous[i].toUpperCase()}`;
+      }
+    }
+
+    // Count how many of each hinted letter the earlier rows proved are there,
+    // then make sure this guess still contains at least that many.
+    const required = new Map();
+    for (let i = 0; i < previous.length; i += 1) {
+      if (marks[row][i] !== MARK.ABSENT) {
+        required.set(previous[i], (required.get(previous[i]) ?? 0) + 1);
+      }
+    }
+    for (const [letter, needed] of required) {
+      const have = [...guess].filter((character) => character === letter).length;
+      if (have < needed) {
+        return needed > 1
+          ? `Guess must contain ${needed} ${letter.toUpperCase()}s`
+          : `Guess must contain ${letter.toUpperCase()}`;
+      }
+    }
+  }
+
+  return null;
+}
+
+function createGame({
+  answer,
+  puzzleNumber,
+  puzzleDate,
+  maxGuesses = 6,
+  hardMode = false,
+}) {
+  return {
+    answer: answer.toLowerCase(),
+    puzzleNumber,
+    puzzleDate,
+    maxGuesses,
+    wordLength: answer.length,
+    hardMode,
+    guesses: [],
+    marks: [],
+    status: STATUS.PLAYING,
+  };
+}
+
+/**
+ * Play one guess. The caller has already decided the word is in the
+ * dictionary; everything else is checked here.
+ *
+ * Returns { ok: true, marks } or { ok: false, reason } and only changes the
+ * game when it returns ok.
+ */
+function submitGuess(game, rawGuess) {
+  const guess = String(rawGuess).toLowerCase();
+
+  if (game.status !== STATUS.PLAYING) {
+    return { ok: false, reason: 'This puzzle is finished' };
+  }
+  if (guess.length !== game.wordLength) {
+    return { ok: false, reason: 'Not enough letters' };
+  }
+  if (game.guesses.includes(guess)) {
+    return { ok: false, reason: 'You already tried that word' };
+  }
+  if (game.hardMode) {
+    const violation = hardModeError(guess, game.guesses, game.marks);
+    if (violation) return { ok: false, reason: violation };
+  }
+
+  const marks = scoreGuess(guess, game.answer);
+  game.guesses.push(guess);
+  game.marks.push(marks);
+
+  if (guess === game.answer) game.status = STATUS.WON;
+  else if (game.guesses.length >= game.maxGuesses) game.status = STATUS.LOST;
+
+  return { ok: true, marks };
+}
+
+/** Restore a game from what was saved in the browser, discarding anything odd. */
+function restoreGame(game, savedGuesses) {
+  if (!Array.isArray(savedGuesses)) return game;
+  for (const guess of savedGuesses) {
+    if (typeof guess !== 'string') break;
+    const result = submitGuess(game, guess);
+    if (!result.ok) break;
+  }
+  return game;
+}
+
+/** The emoji grid everyone pastes into a group chat. */
+function resultGrid(game, { highContrast = false } = {}) {
+  const palette = highContrast
+    ? { [MARK.ABSENT]: '⬛', [MARK.PRESENT]: '🟦', [MARK.CORRECT]: '🟧' }
+    : { [MARK.ABSENT]: '⬛', [MARK.PRESENT]: '🟨', [MARK.CORRECT]: '🟩' };
+  return game.marks.map((row) => row.map((mark) => palette[mark]).join('')).join('\n');
+}
+
+
+/**
+ * Saved progress, statistics and settings.
+ *
+ * All of it lives in the reader's own browser — nothing is sent anywhere. Every
+ * access is wrapped, because localStorage throws rather than returning null in
+ * private windows and when a reader has blocked site data. When that happens
+ * the game still plays perfectly; it just forgets everything on reload.
+ */
+
+
+const KEYS = {
+  progress: `${CONFIG.storagePrefix}:progress`,
+  stats: `${CONFIG.storagePrefix}:stats`,
+  settings: `${CONFIG.storagePrefix}:settings`,
+};
+
+function read(key, fallback) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function write(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// --- settings ---------------------------------------------------------------
+
+const DEFAULT_SETTINGS = {
+  theme: 'auto',        // 'auto' | 'light' | 'dark'
+  hardMode: false,
+  highContrast: false,
+};
+
+function loadSettings() {
+  const saved = read(KEYS.settings, {});
+  return { ...DEFAULT_SETTINGS, ...(saved && typeof saved === 'object' ? saved : {}) };
+}
+
+function saveSettings(settings) {
+  write(KEYS.settings, settings);
+}
+
+// --- statistics -------------------------------------------------------------
+
+const DEFAULT_STATS = {
+  played: 0,
+  wins: 0,
+  currentStreak: 0,
+  maxStreak: 0,
+  distribution: {},      // guess count -> how many wins took that many
+  lastPuzzleNumber: null,
+};
+
+function loadStats() {
+  const saved = read(KEYS.stats, {});
+  const stats = { ...DEFAULT_STATS, ...(saved && typeof saved === 'object' ? saved : {}) };
+  if (!stats.distribution || typeof stats.distribution !== 'object') stats.distribution = {};
+  return stats;
+}
+
+/**
+ * Fold one finished game into the statistics.
+ *
+ * The streak only survives if this puzzle follows the last one recorded, so
+ * skipping a day breaks it — same as the original. Returns the new stats.
+ */
+function recordResult(stats, { puzzleNumber, won, guessCount }) {
+  if (stats.lastPuzzleNumber === puzzleNumber) return stats; // already counted
+
+  const updated = {
+    ...stats,
+    distribution: { ...stats.distribution },
+    played: stats.played + 1,
+    lastPuzzleNumber: puzzleNumber,
+  };
+
+  if (won) {
+    const continues = stats.lastPuzzleNumber === puzzleNumber - 1;
+    updated.wins += 1;
+    updated.currentStreak = continues ? stats.currentStreak + 1 : 1;
+    updated.maxStreak = Math.max(stats.maxStreak, updated.currentStreak);
+    updated.distribution[guessCount] = (updated.distribution[guessCount] ?? 0) + 1;
+  } else {
+    updated.currentStreak = 0;
+  }
+
+  write(KEYS.stats, updated);
+  return updated;
+}
+
+function resetStats() {
+  write(KEYS.stats, DEFAULT_STATS);
+  return { ...DEFAULT_STATS, distribution: {} };
+}
+
+// --- today's board ----------------------------------------------------------
+
+/** Returns the saved guesses for this puzzle, or [] for a fresh board. */
+function loadProgress(puzzleNumber) {
+  const saved = read(KEYS.progress, null);
+  if (!saved || saved.puzzleNumber !== puzzleNumber || !Array.isArray(saved.guesses)) return [];
+  return saved.guesses.filter((guess) => typeof guess === 'string');
+}
+
+function saveProgress(puzzleNumber, guesses) {
+  write(KEYS.progress, { puzzleNumber, guesses });
+}
+
+
+/**
+ * Packing the guess dictionary.
+ *
+ * Nearly fifteen thousand words written out plainly is 73 KB, which is most of
+ * the game's weight and a long wait on a slow phone. Two observations shrink it
+ * to about 26 KB:
+ *
+ *   1. A five-letter word is a number written in base 26 — "aahed" is just
+ *      0·26⁴ + 0·26³ + 7·26² + 4·26 + 3.
+ *   2. Sorted, those numbers sit close together. Storing the gap between each
+ *      word and the one before it leaves small numbers, and small numbers fit
+ *      in one byte.
+ *
+ * The bytes are then written as base64 so the result is plain text that can
+ * live in a JSON file or be pasted into a web page.
+ *
+ * Shared file: the export script and the browser both import it, so the two
+ * can never disagree about the format.
+ */
+
+const A = 'a'.charCodeAt(0);
+const ALPHABET = 26;
+
+function wordToNumber(word) {
+  let value = 0;
+  for (let i = 0; i < word.length; i += 1) {
+    value = value * ALPHABET + (word.charCodeAt(i) - A);
+  }
+  return value;
+}
+
+function numberToWord(value, length) {
+  let remaining = value;
+  let word = '';
+  for (let i = 0; i < length; i += 1) {
+    word = String.fromCharCode(A + (remaining % ALPHABET)) + word;
+    remaining = Math.floor(remaining / ALPHABET);
+  }
+  return word;
+}
+
+/**
+ * @param {string[]} words  all the same length, lowercase a-z
+ * @returns {string} base64
+ */
+function packWords(words) {
+  const numbers = words.map(wordToNumber).sort((a, b) => a - b);
+
+  const bytes = [];
+  let previous = 0;
+  for (const value of numbers) {
+    // Seven bits per byte, with the top bit meaning "there is more to come".
+    let gap = value - previous;
+    previous = value;
+    while (gap >= 128) {
+      bytes.push((gap & 127) | 128);
+      gap >>>= 7;
+    }
+    bytes.push(gap);
+  }
+
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+/**
+ * @param {string} packed  base64 from packWords
+ * @param {number} wordLength
+ * @returns {Set<string>}
+ */
+function unpackWords(packed, wordLength) {
+  const binary = atob(packed);
+  const words = new Set();
+
+  let gap = 0;
+  let shift = 0;
+  let value = 0;
+
+  for (let i = 0; i < binary.length; i += 1) {
+    const byte = binary.charCodeAt(i);
+    gap |= (byte & 127) << shift;
+    if (byte & 128) {
+      shift += 7;
+      continue;
+    }
+    value += gap;
+    words.add(numberToWord(value, wordLength));
+    gap = 0;
+    shift = 0;
+  }
+
+  return words;
+}
+
+
+/**
+ * The list of words the game will accept as a guess.
+ *
+ * Stored in the compact form described in wordlist.js — about a third of the
+ * size of the words written out.
+ */
+
+
+/**
+ * The single-file build (npm run build:single) bakes the word data into the
+ * page and sets this global, so there is nothing to fetch. On the ordinary
+ * site the global is absent and the files are fetched as usual.
+ */
+function inlineData(key) {
+  return globalThis.WORDETTE_DATA?.[key];
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, { cache: 'no-cache' });
+  if (!response.ok) throw new Error(`could not load ${url} (${response.status})`);
+  return response.json();
+}
+
+async function loadDictionary(url, wordLength) {
+  const payload = inlineData('dictionary') ?? await fetchJson(url);
+  const length = payload.wordLength ?? wordLength;
+  let words;
+
+  if (typeof payload.packed === 'string') {
+    words = unpackWords(payload.packed, length);
+  } else if (Array.isArray(payload.words)) {
+    words = new Set(payload.words);
+  } else {
+    throw new Error(`${url} is not in a format this game understands`);
+  }
+
+  return {
+    size: words.size,
+    has: (word) => words.has(String(word).toLowerCase()),
+  };
+}
+
+
+/**
+ * Working out which word belongs to which day.
+ *
+ * Static mode holds the whole calendar: puzzle N is at offset N from the first
+ * scheduled date, so the lookup is arithmetic rather than a search. API mode
+ * asks the server, which only answers for days that have already started.
+ */
+
+
+/**
+ * @returns {{ answer, number, date, isToday, isArchive, source }}
+ */
+async function loadPuzzle(config, { date, puzzleNumber } = {}) {
+  const today = todayISO();
+  const wanted = isISODate(date) ? date : today;
+
+  const puzzle = config.source.mode === 'api'
+    ? await fromApi(config, wanted, puzzleNumber)
+    : await fromSchedule(config, wanted, puzzleNumber);
+
+  return { ...puzzle, isToday: puzzle.date === today, isArchive: puzzle.date !== today };
+}
+
+async function fromSchedule(config, wantedDate, puzzleNumber) {
+  const schedule = inlineData('puzzles') ?? await fetchJson(config.source.puzzlesUrl);
+  if (!Array.isArray(schedule.answers) || !schedule.answers.length) {
+    throw new Error('the puzzle file has no answers in it');
+  }
+
+  let index;
+  let date;
+
+  if (Number.isInteger(puzzleNumber)) {
+    index = puzzleNumber - schedule.startNumber;
+    if (index < 0 || index >= schedule.answers.length) {
+      throw new Error(`there is no puzzle #${puzzleNumber}`);
+    }
+    date = addDays(schedule.startDate, index);
+  } else {
+    index = daysBetween(schedule.startDate, wantedDate);
+    date = wantedDate;
+
+    if (index < 0) {
+      // Before the first scheduled day: show day one rather than an error page.
+      index = 0;
+      date = schedule.startDate;
+    } else if (index >= schedule.answers.length) {
+      // The calendar ran out. Keep the game playable by cycling through it, and
+      // make the reason obvious to whoever looks at the console.
+      console.warn(
+        `[${config.name}] the schedule ends before ${wantedDate}. ` +
+        `Run "npm run db:schedule && npm run db:export" to add more days.`,
+      );
+      index %= schedule.answers.length;
+      date = wantedDate;
+    }
+  }
+
+  const number = schedule.startNumber + index;
+  return {
+    answer: decodeAnswer(schedule.answers[index], number),
+    number,
+    date,
+    source: 'static',
+  };
+}
+
+async function fromApi(config, wantedDate, puzzleNumber) {
+  const url = new URL(`${config.source.apiUrl}/puzzle`, window.location.href);
+  if (Number.isInteger(puzzleNumber)) url.searchParams.set('number', String(puzzleNumber));
+  else url.searchParams.set('date', wantedDate);
+
+  const response = await fetch(url, { cache: 'no-cache' });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.error ?? `the puzzle server returned ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return {
+    answer: payload.encoded ? decodeAnswer(payload.encoded, payload.number) : payload.answer,
+    number: payload.number,
+    date: payload.date,
+    source: 'api',
+  };
+}
+
+
+/**
+ * "The Wordette #12 4/6" — the block of text readers paste into group chats.
+ */
+
+
+function shareText(game, config, { highContrast = false } = {}) {
+  const score = game.status === STATUS.WON ? game.guesses.length : 'X';
+  const hard = game.hardMode ? '*' : '';
+  const lines = [
+    `${config.name} #${game.puzzleNumber} ${score}/${game.maxGuesses}${hard}`,
+    '',
+    resultGrid(game, { highContrast }),
+  ];
+  if (config.shareUrl) lines.push('', config.shareUrl);
+  return lines.join('\n');
+}
+
+/**
+ * Copy to the clipboard, falling back for browsers and embeds where the
+ * clipboard API is unavailable — an iframe without permission, or any page
+ * served over plain http.
+ *
+ * @returns {Promise<boolean>} whether the text made it to the clipboard
+ */
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to the textarea trick
+  }
+
+  try {
+    const scratch = document.createElement('textarea');
+    scratch.value = text;
+    scratch.setAttribute('readonly', '');
+    scratch.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+    document.body.appendChild(scratch);
+    scratch.select();
+    const copied = document.execCommand('copy');
+    scratch.remove();
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
+/** Phones get the native share sheet; everything else gets the clipboard. */
+async function shareResult(text, title) {
+  if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+    try {
+      await navigator.share({ title, text });
+      return 'shared';
+    } catch (error) {
+      if (error?.name === 'AbortError') return 'cancelled';
+    }
+  }
+  return (await copyToClipboard(text)) ? 'copied' : 'failed';
+}
+
+
+/**
+ * Everything that touches the page: drawing the board and the keyboard,
+ * running the reveal animation, and the little messages that pop up.
+ *
+ * The rules live in game.js; this file only shows what happened.
+ */
+
+
+const BACKSPACE_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 5h11.1A2.5 2.5 0 0 1 22 7.5v9a2.5 2.5 0 0 1-2.5 2.5H8.4a2 2 0 0 1-1.5-.7l-4.6-5.5a1.2 1.2 0 0 1 0-1.6l4.6-5.5a2 2 0 0 1 1.5-.7Zm4 4.6L10.9 11l1.9 1.9-1.9 1.9 1.4 1.4 1.9-1.9 1.9 1.9 1.4-1.4-1.9-1.9 1.9-1.9-1.4-1.4-1.9 1.9-1.9-1.9Z"/></svg>';
+
+const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+const MARK_WORDS = {
+  [MARK.CORRECT]: 'correct',
+  [MARK.PRESENT]: 'in the word, wrong place',
+  [MARK.ABSENT]: 'not in the word',
+};
+
+const dom = {};
+let settings = { flipDuration: 300, flipStagger: 240, toastDuration: 1400 };
+let onKeyPress = () => {};
+
+const prefersReducedMotion = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function initUI(config, handlers) {
+  Object.assign(dom, {
+    board: document.getElementById('board'),
+    keyboard: document.getElementById('keyboard'),
+    toasts: document.getElementById('toasts'),
+    announcer: document.getElementById('announcer'),
+    banner: document.getElementById('banner'),
+    puzzleDate: document.getElementById('puzzle-date'),
+    puzzleNumber: document.getElementById('puzzle-number'),
+  });
+  settings = {
+    flipDuration: config.flipDuration,
+    flipStagger: config.flipStagger,
+    toastDuration: config.toastDuration,
+  };
+  onKeyPress = handlers.onKeyPress;
+
+  buildBoard(config.maxGuesses, config.wordLength);
+  buildKeyboard(config.keyboardRows);
+  document.documentElement.style.setProperty('--flip', `${config.flipDuration}ms`);
+}
+
+// --- building ---------------------------------------------------------------
+
+function buildBoard(rows, columns) {
+  dom.board.style.setProperty('--rows', rows);
+  dom.board.style.setProperty('--columns', columns);
+  dom.board.replaceChildren(
+    ...Array.from({ length: rows }, (_, row) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'row';
+      rowEl.setAttribute('role', 'row');
+      rowEl.dataset.row = String(row);
+      rowEl.append(
+        ...Array.from({ length: columns }, (__, column) => {
+          const tile = document.createElement('div');
+          tile.className = 'tile';
+          tile.setAttribute('role', 'cell');
+          tile.dataset.column = String(column);
+          return tile;
+        }),
+      );
+      return rowEl;
+    }),
+  );
+}
+
+function buildKeyboard(rows) {
+  dom.keyboard.replaceChildren(
+    ...rows.map((letters, index) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'keyboard__row';
+      const isLast = index === rows.length - 1;
+
+      if (isLast) rowEl.append(specialKey('Enter', 'Enter', 'Enter'));
+      for (const letter of letters) rowEl.append(letterKey(letter));
+      if (isLast) rowEl.append(specialKey('Backspace', BACKSPACE_ICON, 'Backspace', true));
+
+      return rowEl;
+    }),
+  );
+
+  dom.keyboard.addEventListener('click', (event) => {
+    const key = event.target.closest('.key');
+    if (key) onKeyPress(key.dataset.key);
+  });
+}
+
+function letterKey(letter) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'key';
+  button.dataset.key = letter;
+  button.textContent = letter;
+  button.setAttribute('aria-label', letter.toUpperCase());
+  return button;
+}
+
+function specialKey(key, label, accessibleName, isHtml = false) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'key key--wide';
+  button.dataset.key = key;
+  if (isHtml) button.innerHTML = label;
+  else button.textContent = label;
+  button.setAttribute('aria-label', accessibleName);
+  return button;
+}
+
+// --- the board --------------------------------------------------------------
+
+const tilesIn = (row) => dom.board.children[row].children;
+
+function setHeader({ date, number }) {
+  dom.puzzleDate.textContent = date;
+  dom.puzzleNumber.textContent = number;
+}
+
+function showBanner(html) {
+  dom.banner.innerHTML = html;
+  dom.banner.hidden = false;
+}
+
+/** Draw the letters the reader is part way through typing. */
+function drawCurrentRow(row, letters, columns) {
+  if (row >= dom.board.children.length) return;
+  const tiles = tilesIn(row);
+  for (let i = 0; i < columns; i += 1) {
+    const tile = tiles[i];
+    const letter = letters[i] ?? '';
+    if (tile.textContent === letter) continue;
+    tile.textContent = letter;
+    tile.classList.toggle('tile--filled', Boolean(letter));
+  }
+}
+
+/** Fill in a finished row with no animation — used when restoring a game. */
+function drawFinishedRow(row, guess, marks) {
+  const tiles = tilesIn(row);
+  [...guess].forEach((letter, column) => {
+    const tile = tiles[column];
+    tile.textContent = letter;
+    tile.className = `tile tile--${marks[column]}`;
+    tile.setAttribute('aria-label', `${ORDINALS[column]} letter ${letter.toUpperCase()}, ${MARK_WORDS[marks[column]]}`);
+  });
+}
+
+/** Turn the tiles over one at a time. Resolves once the last one has landed. */
+function revealRow(row, guess, marks) {
+  const tiles = tilesIn(row);
+
+  if (prefersReducedMotion()) {
+    drawFinishedRow(row, guess, marks);
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    [...guess].forEach((letter, column) => {
+      const tile = tiles[column];
+      const delay = column * settings.flipStagger;
+
+      tile.style.animationDelay = `${delay}ms`;
+      tile.classList.add('is-flipping');
+
+      // Swap the colour in while the tile is edge-on to the reader.
+      window.setTimeout(() => {
+        tile.classList.add(`tile--${marks[column]}`);
+        tile.classList.remove('tile--filled');
+        tile.setAttribute('aria-label', `${ORDINALS[column]} letter ${letter.toUpperCase()}, ${MARK_WORDS[marks[column]]}`);
+      }, delay + settings.flipDuration / 2);
+
+      // Tidy the animation away once it has finished, so the tile is left in
+      // a plain state and a later redraw can animate again.
+      window.setTimeout(() => {
+        tile.classList.remove('is-flipping');
+        tile.style.animationDelay = '';
+        if (column === guess.length - 1) resolve();
+      }, delay + settings.flipDuration);
+    });
+  });
+}
+
+function shakeRow(row) {
+  const rowEl = dom.board.children[row];
+  if (!rowEl) return;
+  rowEl.classList.remove('is-invalid');
+  void rowEl.offsetWidth; // restart the animation if it is already running
+  rowEl.classList.add('is-invalid');
+  window.setTimeout(() => rowEl.classList.remove('is-invalid'), 450);
+}
+
+function celebrateRow(row) {
+  if (prefersReducedMotion()) return;
+  dom.board.children[row]?.classList.add('is-winner');
+}
+
+// --- the keyboard -----------------------------------------------------------
+
+function paintKeyboard(letterMarks) {
+  for (const key of dom.keyboard.querySelectorAll('.key')) {
+    const letter = key.dataset.key;
+    const mark = letterMarks[letter];
+    key.classList.remove('key--absent', 'key--present', 'key--correct');
+    if (mark) {
+      key.classList.add(`key--${mark}`);
+      key.setAttribute('aria-label', `${letter.toUpperCase()}, ${MARK_WORDS[mark]}`);
+    } else if (letter?.length === 1) {
+      key.setAttribute('aria-label', letter.toUpperCase());
+    }
+  }
+}
+
+// --- messages ---------------------------------------------------------------
+
+function toast(message, duration = settings.toastDuration) {
+  const element = document.createElement('div');
+  element.className = 'toast';
+  element.textContent = message;
+  dom.toasts.append(element);
+
+  window.setTimeout(() => {
+    element.classList.add('is-leaving');
+    element.addEventListener('animationend', () => element.remove(), { once: true });
+  }, duration);
+}
+
+/** Read a finished row out in the same words the tiles use. */
+function announceGuess(guess, marks) {
+  const detail = [...guess]
+    .map((letter, index) => `${letter.toUpperCase()}, ${MARK_WORDS[marks[index]]}`)
+    .join('; ');
+  announce(`${guess.toUpperCase()}. ${detail}.`);
+}
+
+/** Spoken by a screen reader without showing anything on the page. */
+function announce(message) {
+  dom.announcer.textContent = '';
+  window.setTimeout(() => { dom.announcer.textContent = message; }, 60);
+}
+
+/**
+ * Replace the board with an explanation. `detail` is treated as text — it can
+ * carry a message from a server — while `hint` is our own markup.
+ */
+function fatal(message, detail = '', hint = '') {
+  const panel = document.createElement('div');
+  panel.className = 'fatal';
+
+  const headline = document.createElement('p');
+  headline.append(Object.assign(document.createElement('strong'), { textContent: message }));
+  panel.append(headline);
+
+  if (detail) {
+    const line = document.createElement('p');
+    line.textContent = detail;
+    panel.append(line);
+  }
+  if (hint) {
+    const line = document.createElement('p');
+    line.innerHTML = hint;
+    panel.append(line);
+  }
+
+  document.querySelector('.game').replaceChildren(panel);
+}
+
+
+const ui = { initUI, setHeader, showBanner, drawCurrentRow, drawFinishedRow, revealRow, shakeRow, celebrateRow, paintKeyboard, toast, announceGuess, announce, fatal };
+
+/**
+ * Starting the game up and keeping the pieces in step: input, storage,
+ * dialogs, sharing.
+ */
+
+
+/** What the paper says when you get it in n guesses. */
+const PRAISE = ['Stop the press!', 'Headline news', 'Front page', 'Well read', 'Good copy', 'Just in time'];
+
+const state = {
+  game: null,
+  dictionary: null,
+  settings: loadSettings(),
+  stats: loadStats(),
+  current: '',        // letters typed but not submitted
+  busy: false,        // true while the tiles are turning over
+  archive: false,     // an old or previewed puzzle: never counts
+  countdownTimer: null,
+};
+
+const dialogs = {
+  help: document.getElementById('dialog-help'),
+  stats: document.getElementById('dialog-stats'),
+  settings: document.getElementById('dialog-settings'),
+};
+
+// --- start up ---------------------------------------------------------------
+
+async function start() {
+  applyTheme();
+
+  const params = new URLSearchParams(window.location.search);
+  const requested = {
+    date: params.get('date') ?? undefined,
+    puzzleNumber: params.has('puzzle') ? Number(params.get('puzzle')) : undefined,
+  };
+
+  ui.initUI(CONFIG, { onKeyPress: handleKey });
+
+  let puzzle;
+  let dictionary;
+  try {
+    [puzzle, dictionary] = await Promise.all([
+      loadPuzzle(CONFIG, requested),
+      loadDictionary(CONFIG.source.dictionaryUrl, CONFIG.wordLength),
+    ]);
+  } catch (error) {
+    console.error(error);
+    // Opening index.html straight off the disk is the usual reason this fails
+    // during setup, so say so — but only when that is really what happened.
+    const hint = window.location.protocol === 'file:'
+      ? 'Open the game through a web server — run <code>npm start</code> — rather than opening the file directly.'
+      : 'Please try again in a moment.';
+    ui.fatal('The puzzle could not be loaded.', error.message, hint);
+    return;
+  }
+
+  state.dictionary = dictionary;
+  state.archive = puzzle.isArchive;
+
+  state.game = createGame({
+    answer: puzzle.answer,
+    puzzleNumber: puzzle.number,
+    puzzleDate: puzzle.date,
+    maxGuesses: CONFIG.maxGuesses,
+    hardMode: state.settings.hardMode,
+  });
+
+  ui.setHeader({ date: formatLongDate(puzzle.date), number: puzzle.number });
+  document.title = `${CONFIG.name} #${puzzle.number} — ${CONFIG.publication}`;
+
+  if (state.archive) {
+    const label = isISODate(requested.date) || requested.puzzleNumber
+      ? `You are playing puzzle <strong>#${puzzle.number}</strong> from ${formatLongDate(puzzle.date)}.`
+      : 'You are playing an older puzzle.';
+    ui.showBanner(`${label} It will not change your statistics.`);
+  } else {
+    restoreTodaysBoard();
+  }
+
+  ui.paintKeyboard(keyboardMarks(state.game.guesses, state.game.marks));
+  wireControls();
+
+  if (!state.settings.seenHelp) {
+    dialogs.help.showModal();
+    state.settings = { ...state.settings, seenHelp: true };
+    saveSettings(state.settings);
+  }
+}
+
+function restoreTodaysBoard() {
+  const saved = loadProgress(state.game.puzzleNumber);
+  if (!saved.length) return;
+
+  restoreGame(state.game, saved);
+  state.game.guesses.forEach((guess, row) => ui.drawFinishedRow(row, guess, state.game.marks[row]));
+
+  if (state.game.status !== STATUS.PLAYING) {
+    showOutcome({ reopened: true });
+  }
+}
+
+// --- input ------------------------------------------------------------------
+
+function handleKey(key) {
+  if (!state.game || state.busy || state.game.status !== STATUS.PLAYING) return;
+  if (Object.values(dialogs).some((dialog) => dialog.open)) return;
+
+  if (key === 'Enter') { void submitCurrent(); return; }
+  if (key === 'Backspace') {
+    state.current = state.current.slice(0, -1);
+    ui.drawCurrentRow(state.game.guesses.length, state.current, CONFIG.wordLength);
+    return;
+  }
+  if (/^[a-z]$/.test(key) && state.current.length < CONFIG.wordLength) {
+    state.current += key;
+    ui.drawCurrentRow(state.game.guesses.length, state.current, CONFIG.wordLength);
+  }
+}
+
+function handlePhysicalKey(event) {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  // While a dialog is open its own buttons and menus need these keys — calling
+  // preventDefault() here would stop Enter working on the close button.
+  if (Object.values(dialogs).some((dialog) => dialog.open)) return;
+
+  const key = event.key === 'Enter' || event.key === 'Backspace'
+    ? event.key
+    : event.key.toLowerCase();
+  if (key === 'Enter' || key === 'Backspace' || /^[a-z]$/.test(key)) {
+    event.preventDefault();
+    handleKey(key);
+  }
+}
+
+async function submitCurrent() {
+  const row = state.game.guesses.length;
+  const guess = state.current;
+
+  if (guess.length < CONFIG.wordLength) {
+    reject(row, 'Not enough letters');
+    return;
+  }
+  if (!state.dictionary.has(guess)) {
+    reject(row, 'Not in the word list');
+    return;
+  }
+
+  const result = submitGuess(state.game, guess);
+  if (!result.ok) {
+    reject(row, result.reason);
+    return;
+  }
+
+  state.current = '';
+  state.busy = true;
+  if (!state.archive) saveProgress(state.game.puzzleNumber, state.game.guesses);
+
+  await ui.revealRow(row, guess, result.marks);
+  ui.paintKeyboard(keyboardMarks(state.game.guesses, state.game.marks));
+  state.busy = false;
+
+  ui.announceGuess(guess, result.marks);
+  if (state.game.status !== STATUS.PLAYING) finish(row);
+}
+
+function reject(row, message) {
+  ui.shakeRow(row);
+  ui.toast(message);
+  ui.announce(message);
+}
+
+// --- finishing --------------------------------------------------------------
+
+function finish(row) {
+  const won = state.game.status === STATUS.WON;
+
+  // An archive or previewed puzzle is practice: it changes nothing.
+  if (!state.archive) {
+    state.stats = recordResult(state.stats, {
+      puzzleNumber: state.game.puzzleNumber,
+      won,
+      guessCount: state.game.guesses.length,
+    });
+    void reportResult(won);
+  }
+
+  if (won) {
+    ui.celebrateRow(row);
+    const message = PRAISE[state.game.guesses.length - 1] ?? 'Solved';
+    ui.toast(message);
+    ui.announce(`${message}. The word was ${state.game.answer.toUpperCase()}.`);
+  } else {
+    ui.toast(state.game.answer.toUpperCase(), 3000);
+    ui.announce(`Out of guesses. The word was ${state.game.answer.toUpperCase()}.`);
+  }
+
+  showOutcome({ reopened: false });
+  window.setTimeout(() => {
+    // Not if the reader has opened something else in the meantime — showModal()
+    // throws on a dialog that is already open.
+    if (Object.values(dialogs).every((dialog) => !dialog.open)) dialogs.stats.showModal();
+  }, won ? 1900 : 2200);
+}
+
+/**
+ * Tell the API how the game went, so `v_puzzle_stats` can say how the school
+ * did on a given word. Only in API mode — the static build has nowhere to post
+ * to — and only ever a random per-browser key, never anything about the reader.
+ * A failure here is not worth bothering anyone about.
+ */
+async function reportResult(won) {
+  if (CONFIG.source.mode !== 'api') return;
+
+  let playerKey = state.settings.playerKey;
+  if (!playerKey) {
+    playerKey = window.crypto?.randomUUID?.() ?? String(Math.random()).slice(2);
+    updateSettings({ playerKey });
+  }
+
+  try {
+    await fetch(`${CONFIG.source.apiUrl}/result`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        puzzleNumber: state.game.puzzleNumber,
+        playerKey,
+        solved: won,
+        guessCount: state.game.guesses.length,
+        hardMode: state.game.hardMode,
+      }),
+    });
+  } catch (error) {
+    console.warn('could not report the result', error);
+  }
+}
+
+/** Fill in the part of the statistics dialog that only appears once you finish. */
+function showOutcome({ reopened }) {
+  const won = state.game.status === STATUS.WON;
+  const outcome = document.getElementById('outcome');
+  const answer = document.getElementById('outcome-answer');
+
+  answer.innerHTML = won
+    ? `Today's word was <strong>${state.game.answer}</strong>`
+    : `Better luck tomorrow. The word was <strong>${state.game.answer}</strong>`;
+  outcome.hidden = false;
+
+  renderStats();
+  startCountdown();
+  if (reopened) ui.announce(`This puzzle is finished. The word was ${state.game.answer.toUpperCase()}.`);
+}
+
+function renderStats() {
+  const { played, wins, currentStreak, maxStreak, distribution } = state.stats;
+  document.getElementById('stat-played').textContent = played;
+  document.getElementById('stat-winrate').textContent = played ? Math.round((wins / played) * 100) : 0;
+  document.getElementById('stat-streak').textContent = currentStreak;
+  document.getElementById('stat-best').textContent = maxStreak;
+
+  const counts = Array.from({ length: CONFIG.maxGuesses }, (_, i) => distribution[i + 1] ?? 0);
+  const highest = Math.max(1, ...counts);
+  const finishedNow = state.game?.status === STATUS.WON && !state.archive
+    ? state.game.guesses.length
+    : 0;
+
+  document.getElementById('distribution').replaceChildren(
+    ...counts.map((count, index) => {
+      const row = document.createElement('div');
+      row.className = 'distribution__row';
+
+      const label = document.createElement('span');
+      label.className = 'distribution__label';
+      label.textContent = index + 1;
+
+      const bar = document.createElement('span');
+      bar.className = 'distribution__bar';
+      if (index + 1 === finishedNow) bar.classList.add('distribution__bar--current');
+      bar.style.width = `${Math.max(7, (count / highest) * 100)}%`;
+      bar.textContent = count;
+
+      row.append(label, bar);
+      return row;
+    }),
+  );
+}
+
+function startCountdown() {
+  const clock = document.getElementById('countdown');
+  window.clearInterval(state.countdownTimer);
+
+  const tick = () => {
+    const left = msUntilTomorrow();
+    if (left <= 0) {
+      window.clearInterval(state.countdownTimer);
+      clock.textContent = '00:00:00';
+      window.location.reload();
+      return;
+    }
+    const seconds = Math.floor(left / 1000);
+    clock.textContent = [
+      Math.floor(seconds / 3600),
+      Math.floor((seconds % 3600) / 60),
+      seconds % 60,
+    ].map((part) => String(part).padStart(2, '0')).join(':');
+  };
+
+  tick();
+  state.countdownTimer = window.setInterval(tick, 1000);
+}
+
+// --- controls ---------------------------------------------------------------
+
+function wireControls() {
+  document.addEventListener('keydown', handlePhysicalKey);
+
+  document.getElementById('btn-help').addEventListener('click', () => dialogs.help.showModal());
+  document.getElementById('btn-settings').addEventListener('click', () => dialogs.settings.showModal());
+  document.getElementById('btn-stats').addEventListener('click', () => {
+    renderStats();
+    if (state.game.status !== STATUS.PLAYING) startCountdown();
+    dialogs.stats.showModal();
+  });
+
+  dialogs.stats.addEventListener('close', () => window.clearInterval(state.countdownTimer));
+
+  document.getElementById('btn-share').addEventListener('click', async () => {
+    const text = shareText(state.game, CONFIG, { highContrast: state.settings.highContrast });
+    const outcome = await shareResult(text, CONFIG.name);
+    if (outcome === 'copied') ui.toast('Copied to clipboard');
+    else if (outcome === 'failed') ui.toast('Could not copy — select the grid and copy it yourself');
+  });
+
+  const hardToggle = document.getElementById('set-hard');
+  const contrastToggle = document.getElementById('set-contrast');
+  const themeSelect = document.getElementById('set-theme');
+
+  hardToggle.checked = state.settings.hardMode;
+  contrastToggle.checked = state.settings.highContrast;
+  themeSelect.value = state.settings.theme;
+
+  hardToggle.addEventListener('change', () => {
+    const midGame = state.game.guesses.length > 0 && state.game.status === STATUS.PLAYING;
+    if (midGame) {
+      hardToggle.checked = state.settings.hardMode;
+      ui.toast('Hard mode can only be changed before you start');
+      return;
+    }
+    updateSettings({ hardMode: hardToggle.checked });
+    state.game.hardMode = hardToggle.checked;
+  });
+
+  contrastToggle.addEventListener('change', () => {
+    updateSettings({ highContrast: contrastToggle.checked });
+    applyTheme();
+  });
+
+  themeSelect.addEventListener('change', () => {
+    updateSettings({ theme: themeSelect.value });
+    applyTheme();
+  });
+
+  document.getElementById('btn-reset-stats').addEventListener('click', () => {
+    const sure = window.confirm('Clear your played count, streaks and distribution on this device?');
+    if (!sure) return;
+    state.stats = resetStats();
+    renderStats();
+    ui.toast('Statistics cleared');
+  });
+
+  reportHeightToParent();
+}
+
+function updateSettings(patch) {
+  state.settings = { ...state.settings, ...patch };
+  saveSettings(state.settings);
+}
+
+function applyTheme() {
+  const root = document.documentElement;
+  if (state.settings.theme === 'auto') delete root.dataset.theme;
+  else root.dataset.theme = state.settings.theme;
+
+  if (state.settings.highContrast) root.dataset.contrast = 'high';
+  else delete root.dataset.contrast;
+}
+
+/**
+ * When the game is embedded in an article, tell the page around it how tall it
+ * needs to be. The host page can listen for this and resize the iframe — see
+ * docs/EMBEDDING.md.
+ */
+function reportHeightToParent() {
+  if (window.parent === window) return;
+  const post = () => {
+    window.parent.postMessage(
+      { type: 'gzaat-wordette:height', height: document.documentElement.scrollHeight },
+      '*',
+    );
+  };
+  new ResizeObserver(post).observe(document.body);
+  post();
+}
+
+start();
+
+}());
+</script>
+</body>
+</html>

@@ -18,6 +18,7 @@ import {
 } from './lib/db.mjs';
 import { addDays, daysBetween, isISODate, todayISO, weekdayName } from '../public/wordette/js/dates.js';
 import { encodeAnswer, decodeAnswer } from '../public/wordette/js/cipher.js';
+import { packWords } from '../public/wordette/js/wordlist.js';
 
 const SEED_DIR = resolve(ROOT, 'scripts', 'seed');
 const EXPORT_DIR = resolve(ROOT, 'public', 'wordette', 'data');
@@ -596,9 +597,8 @@ function cmdExport() {
     generatedAt: puzzles.generatedAt,
     wordLength: puzzles.wordLength,
     count: words.length,
-    // One long string instead of an array of strings: same content, roughly
-    // half the bytes over the wire, split back apart on load.
-    packed: words.join(''),
+    // See wordlist.js: base-26 numbers, gap-coded, in base64.
+    packed: packWords(words),
   };
 
   writeFileSync(resolve(outDir, 'puzzles.json'), `${JSON.stringify(puzzles)}\n`);

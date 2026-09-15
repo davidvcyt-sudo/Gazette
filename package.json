@@ -18,7 +18,8 @@
     "db:export": "node scripts/wordette-db.mjs export",
     "db:doctor": "node scripts/wordette-db.mjs doctor",
     "db:list": "node scripts/wordette-db.mjs list",
-    "db:reset": "node scripts/wordette-db.mjs init --force && node scripts/wordette-db.mjs import && node scripts/wordette-db.mjs schedule --days 14 --max-difficulty easy && node scripts/wordette-db.mjs schedule --days 1811 && node scripts/wordette-db.mjs export"
+    "db:reset": "node scripts/wordette-db.mjs init --force && node scripts/wordette-db.mjs import && node scripts/wordette-db.mjs schedule --days 14 --max-difficulty easy && node scripts/wordette-db.mjs schedule --days 1811 && node scripts/wordette-db.mjs export",
+    "build:single": "node scripts/build-single-file.mjs"
   },
   "license": "MIT"
 }
