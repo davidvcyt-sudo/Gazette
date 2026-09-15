@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GZAAT Wordle — The Gazette</title>
+<meta name="description" content="The Gazette's daily five-letter word game. Six guesses, one new word every day.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#faf7f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14110e" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='12' fill='%23117a4a'/><text x='50' y='72' font-size='64' font-family='Georgia,serif' font-weight='700' text-anchor='middle' fill='%23fff'>G</text></svg>">
+<link rel="stylesheet" href="styles.css">
+<script>
+  // Set the theme before the first paint so a dark-mode reader never gets a
+  // white flash. Kept inline and tiny for that reason.
+  try {
+    var saved = JSON.parse(localStorage.getItem('gzaat-wordle:v1:settings') || '{}');
+    if (saved.theme === 'light' || saved.theme === 'dark') {
+      document.documentElement.dataset.theme = saved.theme;
+    }
+    if (saved.highContrast) document.documentElement.dataset.contrast = 'high';
+  } catch (error) { /* first visit, or storage is blocked */ }
+</script>
+</head>
+<body>
+<a class="skip-link" href="#board">Skip to the puzzle</a>
+
+<header class="masthead">
+  <div class="masthead__bar">
+    <p class="masthead__paper">The Gazette</p>
+    <nav class="masthead__tools" aria-label="Game menu">
+      <button type="button" class="icon-button" id="btn-help" aria-label="How to play">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 14.2a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2Zm1.7-5.2c-.7.5-.9.8-.9 1.4v.3h-1.6v-.4c0-1.2.4-1.8 1.3-2.4.7-.5 1-.8 1-1.4 0-.6-.5-1-1.3-1s-1.4.4-1.7 1.1l-1.4-.7C9.6 7.6 10.6 7 12.2 7c1.7 0 2.9 1 2.9 2.4 0 1-.5 1.7-1.4 2.3Z"/></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-stats" aria-label="Your statistics">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h3.5v10H4Zm6.2 0V4h3.6v16h-3.6Zm6.3 0v-7H20v7h-3.5Z"/></svg>
+      </button>
+      <button type="button" class="icon-button" id="btn-settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m19.4 13-.1-1 .1-1 2-1.6-2-3.4-2.4.8a7.6 7.6 0 0 0-1.7-1l-.4-2.5H9.1l-.4 2.5c-.6.2-1.2.6-1.7 1l-2.4-.8-2 3.4L4.7 11l-.1 1 .1 1-2 1.6 2 3.4 2.4-.8c.5.4 1 .8 1.7 1l.4 2.5h5.8l.4-2.5c.6-.2 1.2-.6 1.7-1l2.4.8 2-3.4-2-1.6ZM12 15.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4Z"/></svg>
+      </button>
+    </nav>
+  </div>
+  <h1 class="masthead__title">GZAAT Wordle</h1>
+  <p class="masthead__meta">
+    <span id="puzzle-date">&nbsp;</span>
+    <span class="masthead__dot" aria-hidden="true">·</span>
+    <span>No.&nbsp;<span id="puzzle-number">—</span></span>
+  </p>
+</header>
+
+<main class="game">
+  <p class="banner" id="banner" hidden></p>
+
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="Guesses"></div>
+  </div>
+
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+  <p class="visually-hidden" id="announcer" role="status" aria-live="polite"></p>
+
+  <div class="keyboard" id="keyboard" role="group" aria-label="Keyboard"></div>
+</main>
+
+<footer class="colophon">
+  <p>A word a day from <strong>The Gazette</strong>. Come back tomorrow for a new one.</p>
+</footer>
+
+<noscript>
+  <p class="fatal">GZAAT Wordle needs JavaScript switched on to run.</p>
+</noscript>
+
+<!-- How to play ---------------------------------------------------------- -->
+<dialog class="sheet" id="dialog-help" aria-labelledby="help-title">
+  <form method="dialog" class="sheet__close-form">
+    <button class="sheet__close" aria-label="Close">&times;</button>
+  </form>
+  <h2 id="help-title">How to play</h2>
+  <p>Guess the word in six tries. Every guess has to be a real five-letter word.</p>
+  <p>After each guess the tiles change colour to show how close you were.</p>
+
+  <div class="example">
+    <div class="example__row" aria-hidden="true">
+      <span class="tile tile--correct">P</span><span class="tile">A</span><span class="tile">P</span><span class="tile">E</span><span class="tile">R</span>
+    </div>
+    <p><strong>P</strong> is in the word and in the right place.</p>
+  </div>
+  <div class="example">
+    <div class="example__row" aria-hidden="true">
+      <span class="tile">P</span><span class="tile">R</span><span class="tile tile--present">I</span><span class="tile">N</span><span class="tile">T</span>
+    </div>
+    <p><strong>I</strong> is in the word, but somewhere else.</p>
+  </div>
+  <div class="example">
+    <div class="example__row" aria-hidden="true">
+      <span class="tile">S</span><span class="tile">T</span><span class="tile">O</span><span class="tile tile--absent">R</span><span class="tile">Y</span>
+    </div>
+    <p><strong>R</strong> is not in the word at all.</p>
+  </div>
+
+  <p class="sheet__note">
+    A new puzzle is published every day at midnight. Everyone reading The Gazette
+    gets the same word.
+  </p>
+</dialog>
+
+<!-- Statistics ----------------------------------------------------------- -->
+<dialog class="sheet" id="dialog-stats" aria-labelledby="stats-title">
+  <form method="dialog" class="sheet__close-form">
+    <button class="sheet__close" aria-label="Close">&times;</button>
+  </form>
+  <h2 id="stats-title">Statistics</h2>
+
+  <dl class="scoreboard">
+    <div><dt>Played</dt><dd id="stat-played">0</dd></div>
+    <div><dt>Win&nbsp;%</dt><dd id="stat-winrate">0</dd></div>
+    <div><dt>Current streak</dt><dd id="stat-streak">0</dd></div>
+    <div><dt>Best streak</dt><dd id="stat-best">0</dd></div>
+  </dl>
+
+  <h3>Guess distribution</h3>
+  <div class="distribution" id="distribution"></div>
+
+  <div class="outcome" id="outcome" hidden>
+    <p class="outcome__answer" id="outcome-answer"></p>
+    <div class="outcome__actions">
+      <div class="countdown">
+        <p class="countdown__label">Next puzzle</p>
+        <p class="countdown__clock" id="countdown">--:--:--</p>
+      </div>
+      <button type="button" class="button button--share" id="btn-share">
+        Share
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l4.5 4.5-1.4 1.4L13 6.8V15h-2V6.8L8.9 8.9 7.5 7.5 12 3Zm-7 9h2v7h10v-7h2v9H5v-9Z"/></svg>
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Settings ------------------------------------------------------------- -->
+<dialog class="sheet" id="dialog-settings" aria-labelledby="settings-title">
+  <form method="dialog" class="sheet__close-form">
+    <button class="sheet__close" aria-label="Close">&times;</button>
+  </form>
+  <h2 id="settings-title">Settings</h2>
+
+  <div class="setting">
+    <label class="setting__text" for="set-hard">
+      Hard mode
+      <span>Any hint you have uncovered must be used in later guesses.</span>
+    </label>
+    <input type="checkbox" id="set-hard" class="switch" role="switch">
+  </div>
+
+  <div class="setting">
+    <label class="setting__text" for="set-contrast">
+      High contrast
+      <span>Orange and blue instead of green and yellow.</span>
+    </label>
+    <input type="checkbox" id="set-contrast" class="switch" role="switch">
+  </div>
+
+  <div class="setting">
+    <label class="setting__text" for="set-theme">
+      Theme
+      <span>Follow the device, or pick one.</span>
+    </label>
+    <select id="set-theme" class="select">
+      <option value="auto">Automatic</option>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+  </div>
+
+  <div class="setting setting--stacked">
+    <button type="button" class="button button--quiet" id="btn-reset-stats">Reset my statistics</button>
+    <p class="sheet__note">
+      Your guesses and statistics are stored in this browser only. Nothing is
+      sent to The Gazette.
+    </p>
+  </div>
+</dialog>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

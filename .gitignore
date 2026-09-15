@@ -1,0 +1,9 @@
+# The database is rebuilt from db/schema.sql + scripts/seed/*.txt, so it is not
+# committed. Run `npm run db:reset` after cloning.
+db/*.db
+db/*.db-wal
+db/*.db-shm
+
+node_modules/
+.DS_Store
+*.log

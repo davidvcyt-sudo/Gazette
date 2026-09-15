@@ -1,0 +1,87 @@
+# GZAAT Wordle — blocklist
+#
+# Words listed here are never imported as puzzle answers and never scheduled,
+# even if they are common English words. They remain valid *guesses* if they
+# are in guesses.txt — blocking only keeps a word from being the word of the day.
+#
+# Editors: add or remove entries freely, one lowercase word per line, then run
+#   npm run db:reset
+# Lines starting with # are comments.
+
+# --- profanity and vulgar terms ---
+arses
+bitch
+cocks
+crapy
+cunts
+dicks
+farts
+fucks
+pissy
+shite
+shits
+turds
+twats
+wanks
+
+# --- sexual / anatomical ---
+boner
+booty
+bosom
+dildo
+groin
+horny
+nudes
+penis
+pubes
+pussy
+semen
+sperm
+sluts
+vulva
+whore
+
+# --- slurs and terms used as slurs ---
+chink
+coons
+dagos
+darky
+dykes
+gippo
+gooks
+gyppo
+kikes
+micks
+negro
+paddy
+queer
+spick
+spics
+wench
+
+# --- violence against people, hate, self-harm ---
+lynch
+noose
+raped
+rapes
+nazis
+bigot
+slave
+slavs
+jihad
+
+# --- unpleasant for a family puzzle ---
+feces
+fetus
+puked
+vomit
+
+# --- proper nouns that slipped through the frequency list ---
+bible
+billy
+bobby
+greek
+henry
+roman
+swiss
+tommy

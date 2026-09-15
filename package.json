@@ -1,0 +1,24 @@
+{
+  "name": "gzaat-wordle",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GZAAT Wordle \u2014 the daily word game for the Gazette, with the word database behind it",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node server/serve-static.mjs",
+    "api": "node server/api.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "db": "node scripts/wordle-db.mjs",
+    "db:init": "node scripts/wordle-db.mjs init",
+    "db:import": "node scripts/wordle-db.mjs import",
+    "db:schedule": "node scripts/wordle-db.mjs schedule",
+    "db:export": "node scripts/wordle-db.mjs export",
+    "db:doctor": "node scripts/wordle-db.mjs doctor",
+    "db:list": "node scripts/wordle-db.mjs list",
+    "db:reset": "node scripts/wordle-db.mjs init --force && node scripts/wordle-db.mjs import && node scripts/wordle-db.mjs schedule --days 14 --max-difficulty easy && node scripts/wordle-db.mjs schedule --days 1811 && node scripts/wordle-db.mjs export"
+  },
+  "license": "MIT"
+}
