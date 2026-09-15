@@ -4,7 +4,7 @@
 
 export const CONFIG = {
   /** Shown in the header and in the text readers share. */
-  name: 'GZAAT Wordle',
+  name: 'GZAAT Wordette',
   publication: 'The Gazette',
 
   /** Change these and re-export the database if you ever want a 6-letter game. */
@@ -23,11 +23,11 @@ export const CONFIG = {
     mode: 'static',
     puzzlesUrl: 'data/puzzles.json',
     dictionaryUrl: 'data/dictionary.json',
-    apiUrl: '/api/wordle',
+    apiUrl: '/api/wordette',
   },
 
   /** Appended to the shared result. Set it to the page's public address. */
-  shareUrl: 'https://gazette.gzaat.ge/wordle/',
+  shareUrl: 'https://gazette.gzaat.ge/wordette/',
 
   /** Swap these rows out for a different alphabet or layout. */
   keyboardRows: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'],
@@ -37,7 +37,7 @@ export const CONFIG = {
    * If you change it, change the matching key in the small inline script at the
    * top of index.html too; that one runs before this file is loaded.
    */
-  storagePrefix: 'gzaat-wordle:v1',
+  storagePrefix: 'gzaat-wordette:v1',
 
   /** Animation timings, in milliseconds. */
   flipDuration: 300,

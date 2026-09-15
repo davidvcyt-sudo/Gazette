@@ -1,31 +1,43 @@
 /* =============================================================================
-   GZAAT Wordle
+   GZAAT Wordette
    Newsprint colours around a board that still looks like the game everyone
    already knows how to play.
    ========================================================================== */
 
 :root {
-  --paper:        #faf7f0;
-  --paper-sunk:   #f1ece0;
-  --ink:          #16130f;
-  --ink-soft:     #6b6257;
-  --rule:         #ddd5c5;
+  /* Newsprint that has sat in a drawer for a few years: yellowed, warm, but
+     still a page you can read. */
+  --paper:        #f4ecdb;
+  --paper-sunk:   #ebe1cb;
+  --ink:          #201a12;
+  --ink-soft:     #6a5f4c;
+  --rule:         #d6c9ae;
 
-  --tile-border:  #cfc6b4;
-  --tile-filled:  #8d8472;
-  --tile-text:    #16130f;
-  --tile-text-on: #ffffff;
+  --tile-border:  #c9bb9d;
+  --tile-filled:  #877c64;
+  --tile-text:    #201a12;
+  --tile-text-on: #fffdf7;
 
-  --absent:       #8c8375;
-  --present:      #c8a227;
-  --correct:      #1f7a4d;
+  --absent:       #857b68;
+  --present:      #ab8420;
+  --correct:      #26714a;
 
-  --key:          #e5ddcd;
-  --key-hover:    #d9cfba;
-  --key-text:     #16130f;
+  --key:          #e3d8bf;
+  --key-hover:    #d6c9ab;
+  --key-text:     #201a12;
 
-  --accent:       #a3261d;
-  --shadow:       0 10px 30px rgba(20, 16, 12, .18);
+  --accent:       #99291d;
+  --shadow:       0 10px 30px rgba(32, 26, 18, .16);
+
+  /* The two things that make paper look like paper: a speckle of fibre, and
+     yellowing that is heavier at the edges than in the middle. Both are kept
+     faint — turn them up here if you want the page more obviously aged, or set
+     them to `none` for flat colour. They are switched off in dark mode, where
+     there is no paper to imitate. */
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23f)' opacity='0.055'/%3E%3C/svg%3E");
+  --paper-aging:
+    radial-gradient(120% 85% at 50% -15%, rgba(126, 99, 47, .05), transparent 62%),
+    radial-gradient(110% 80% at 6% 112%, rgba(126, 99, 47, .045), transparent 58%);
 
   --serif: Georgia, 'Iowan Old Style', 'Times New Roman', times, serif;
   --sans:  ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -57,6 +69,9 @@
     --accent:      #d4695f;
     --shadow:      0 10px 30px rgba(0, 0, 0, .5);
 
+    --paper-grain: none;
+    --paper-aging: none;
+
     color-scheme: dark;
   }
 }
@@ -83,6 +98,9 @@
   --accent:      #d4695f;
   --shadow:      0 10px 30px rgba(0, 0, 0, .5);
 
+  --paper-grain: none;
+  --paper-aging: none;
+
   color-scheme: dark;
 }
 
@@ -100,7 +118,9 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
+  background-color: var(--paper);
+  background-image: var(--paper-grain), var(--paper-aging);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--sans);
   -webkit-text-size-adjust: 100%;
@@ -135,7 +155,7 @@ body {
 
 .masthead {
   padding: .5rem 1rem .75rem;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 3px double var(--rule);
   text-align: center;
 }
 

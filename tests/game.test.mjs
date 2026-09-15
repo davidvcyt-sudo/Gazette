@@ -4,9 +4,9 @@ import { test, describe } from 'node:test';
 import {
   MARK, STATUS, createGame, hardModeError, keyboardMarks, resultGrid,
   restoreGame, scoreGuess, submitGuess,
-} from '../public/wordle/js/game.js';
-import { decodeAnswer, encodeAnswer } from '../public/wordle/js/cipher.js';
-import { addDays, daysBetween, isISODate, todayISO } from '../public/wordle/js/dates.js';
+} from '../public/wordette/js/game.js';
+import { decodeAnswer, encodeAnswer } from '../public/wordette/js/cipher.js';
+import { addDays, daysBetween, isISODate, todayISO } from '../public/wordette/js/dates.js';
 
 const { ABSENT: _, PRESENT: P, CORRECT: C } = MARK;
 

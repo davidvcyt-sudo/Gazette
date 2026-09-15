@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GZAAT Wordle — The Gazette</title>
+<title>GZAAT Wordette — The Gazette</title>
 <meta name="description" content="The Gazette's daily five-letter word game. Six guesses, one new word every day.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#faf7f0" media="(prefers-color-scheme: light)">
@@ -14,7 +14,7 @@
   // Set the theme before the first paint so a dark-mode reader never gets a
   // white flash. Kept inline and tiny for that reason.
   try {
-    var saved = JSON.parse(localStorage.getItem('gzaat-wordle:v1:settings') || '{}');
+    var saved = JSON.parse(localStorage.getItem('gzaat-wordette:v1:settings') || '{}');
     if (saved.theme === 'light' || saved.theme === 'dark') {
       document.documentElement.dataset.theme = saved.theme;
     }
@@ -40,7 +40,7 @@
       </button>
     </nav>
   </div>
-  <h1 class="masthead__title">GZAAT Wordle</h1>
+  <h1 class="masthead__title">GZAAT Wordette</h1>
   <p class="masthead__meta">
     <span id="puzzle-date">&nbsp;</span>
     <span class="masthead__dot" aria-hidden="true">·</span>
@@ -66,7 +66,7 @@
 </footer>
 
 <noscript>
-  <p class="fatal">GZAAT Wordle needs JavaScript switched on to run.</p>
+  <p class="fatal">GZAAT Wordette needs JavaScript switched on to run.</p>
 </noscript>
 
 <!-- How to play ---------------------------------------------------------- -->

@@ -125,7 +125,7 @@ npm run db -- set --date 2027-05-25 --word gzaat --note "founders' day"
 
 ## Publishing
 
-`npm run db:export` writes two files into `public/wordle/data/`:
+`npm run db:export` writes two files into `public/wordette/data/`:
 
 **`puzzles.json`** — the calendar.
 
@@ -150,7 +150,7 @@ split back up in the browser. About 73 KB, 35 KB over a gzipped connection.
 ### About the encoding
 
 Answers are XOR-ed with a keystream derived from the puzzle number and written
-in base64 (`public/wordle/js/cipher.js`). This stops a reader spoiling the week
+in base64 (`public/wordette/js/cipher.js`). This stops a reader spoiling the week
 by glancing at the page source. It is not encryption: anyone who opens the
 JavaScript can decode the file. That is a deliberate trade — it keeps the game a
 set of static files that any web server can host.
@@ -163,17 +163,17 @@ If you need real secrecy, use the API.
 npm run api     # serves the site and the API on http://localhost:8080
 ```
 
-Then set `source.mode` to `'api'` in `public/wordle/js/config.js`. The browser
+Then set `source.mode` to `'api'` in `public/wordette/js/config.js`. The browser
 now asks the server for the current puzzle, and the server refuses to answer for
 any date that has not started yet.
 
 | Endpoint | Does |
 | --- | --- |
-| `GET /api/wordle/puzzle` | Today's puzzle |
-| `GET /api/wordle/puzzle?date=2026-09-15` | An earlier day (a future date is refused) |
-| `GET /api/wordle/puzzle?number=12` | The same, by puzzle number |
-| `GET /api/wordle/stats?number=12` | Plays, solves and average guesses |
-| `POST /api/wordle/result` | Record one finished game |
+| `GET /api/wordette/puzzle` | Today's puzzle |
+| `GET /api/wordette/puzzle?date=2026-09-15` | An earlier day (a future date is refused) |
+| `GET /api/wordette/puzzle?number=12` | The same, by puzzle number |
+| `GET /api/wordette/stats?number=12` | Plays, solves and average guesses |
+| `POST /api/wordette/result` | Record one finished game |
 
 It needs the database file on the web server, which a static host cannot do —
 that is the cost of the trade.
@@ -194,14 +194,14 @@ only the export step has to change.
 
 ## Backups
 
-`db/gzaat-wordle.db` is deliberately not committed: it is rebuilt from
+`db/gzaat-wordette.db` is deliberately not committed: it is rebuilt from
 `db/schema.sql` and `scripts/seed/*.txt`, both of which are. What is *not*
 reproducible is your own editing — words you added, days you pinned, blocks you
 made. Either commit those as changes to the seed files, or keep a copy of the
 database file:
 
 ```bash
-sqlite3 db/gzaat-wordle.db ".backup db/backup-$(date +%F).db"
+sqlite3 db/gzaat-wordette.db ".backup db/backup-$(date +%F).db"
 ```
 
 If you lose the database entirely, `npm run db:reset` gives you a working game

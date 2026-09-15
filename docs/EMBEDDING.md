@@ -4,18 +4,18 @@ The game is a folder of static files. Anywhere that can serve HTML can serve it.
 
 ## The simple way: its own page
 
-Copy `public/wordle/` onto the web server and link to it:
+Copy `public/wordette/` onto the web server and link to it:
 
 ```
-https://gazette.example.ge/wordle/
+https://gazette.example.ge/wordette/
 ```
 
 That is the whole deployment. Then set two things in
-`public/wordle/js/config.js`:
+`public/wordette/js/config.js`:
 
 ```js
 publication: 'The Gazette',                    // your paper's name
-shareUrl: 'https://gazette.example.ge/wordle/' // where readers who see a shared result should land
+shareUrl: 'https://gazette.example.ge/wordette/' // where readers who see a shared result should land
 ```
 
 `shareUrl` is worth getting right — it is the line that travels when a reader
@@ -27,10 +27,10 @@ The game's files can be cached hard; the data files must not be, or readers will
 be stuck on yesterday's word:
 
 ```nginx
-location /wordle/data/ {
+location /wordette/data/ {
   add_header Cache-Control "no-cache";   # revalidate every load
 }
-location /wordle/ {
+location /wordette/ {
   add_header Cache-Control "public, max-age=86400";
 }
 ```
@@ -42,9 +42,9 @@ what it actually needs.
 
 ```html
 <iframe
-  src="https://gazette.example.ge/wordle/"
-  title="GZAAT Wordle"
-  id="gzaat-wordle"
+  src="https://gazette.example.ge/wordette/"
+  title="GZAAT Wordette"
+  id="gzaat-wordette"
   style="width: 100%; height: 720px; border: 0; display: block; margin: 2rem auto; max-width: 560px;"
   loading="lazy"
 ></iframe>
@@ -52,9 +52,9 @@ what it actually needs.
 <script>
   // The game posts its height whenever the layout changes.
   window.addEventListener('message', function (event) {
-    if (event.source !== document.getElementById('gzaat-wordle').contentWindow) return;
-    if (event.data && event.data.type === 'gzaat-wordle:height') {
-      document.getElementById('gzaat-wordle').style.height = event.data.height + 'px';
+    if (event.source !== document.getElementById('gzaat-wordette').contentWindow) return;
+    if (event.data && event.data.type === 'gzaat-wordette:height') {
+      document.getElementById('gzaat-wordette').style.height = event.data.height + 'px';
     }
   });
 </script>
@@ -72,7 +72,7 @@ Two things to know about iframes:
 
 ## Fitting the paper's design
 
-Everything visual is in `public/wordle/styles.css`, and the colours are custom
+Everything visual is in `public/wordette/styles.css`, and the colours are custom
 properties at the top of it:
 
 ```css
@@ -98,8 +98,8 @@ line at the foot of the page.
 Any past day can be linked directly:
 
 ```
-/wordle/?date=2026-09-20     a particular date
-/wordle/?puzzle=6            the same puzzle, by number
+/wordette/?date=2026-09-20     a particular date
+/wordette/?puzzle=6            the same puzzle, by number
 ```
 
 Those play normally but are marked as archive puzzles and left out of the
@@ -109,7 +109,7 @@ published — handy when you have pinned something for a special issue.
 ## Checklist before it goes live
 
 - [ ] `npm run db:doctor` reports no problems
-- [ ] `public/wordle/data/` on the server matches what the database exported
+- [ ] `public/wordette/data/` on the server matches what the database exported
 - [ ] `publication` and `shareUrl` set in `config.js`
 - [ ] The data files are served with `Cache-Control: no-cache`
 - [ ] The page has been opened on a phone — the board should fit without scrolling

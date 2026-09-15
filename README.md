@@ -1,4 +1,4 @@
-# GZAAT Wordle
+# GZAAT Wordette
 
 The Gazette's daily five-letter word game: six guesses, one new word every day,
 the same word for every reader. It is plain HTML, CSS and JavaScript — no build
@@ -6,7 +6,7 @@ step, no framework, no npm packages — plus a small database that decides which
 word belongs to which day.
 
 ```
-public/wordle/     the game itself — copy this folder onto the website
+public/wordette/     the game itself — copy this folder onto the website
 db/                the schema for the word database
 scripts/           the command line tool the newsroom uses, and the word lists
 server/            a local web server, and an optional puzzle API
@@ -20,10 +20,10 @@ Needs Node 22.5 or newer, and nothing else.
 
 ```bash
 npm run db:reset    # build the database and export the game's data files
-npm start           # serve the site at http://localhost:8080/wordle/
+npm start           # serve the site at http://localhost:8080/wordette/
 ```
 
-`db:reset` creates `db/gzaat-wordle.db`, loads about 14,800 words into it,
+`db:reset` creates `db/gzaat-wordette.db`, loads about 14,800 words into it,
 schedules five years of daily puzzles, and writes the two JSON files the game
 reads. It is safe to run again whenever you like — but it does rebuild the
 calendar from scratch, so only do it before you publish.
@@ -32,7 +32,7 @@ calendar from scratch, so only do it before you publish.
 
 1. **The database is the source of truth.** `words` holds the dictionary,
    `puzzles` is the calendar: one row per date, each pointing at one word.
-2. **Exporting** turns the calendar into `public/wordle/data/puzzles.json`, a
+2. **Exporting** turns the calendar into `public/wordette/data/puzzles.json`, a
    dated list of answers, and the dictionary into `dictionary.json`.
 3. **The browser** works out how many days have passed since the first puzzle
    and takes that day's word. The change happens at local midnight, so everyone
@@ -47,7 +47,7 @@ tomorrow's word to be genuinely unavailable, run the API server described in
 ## Running the calendar
 
 Everything goes through one command. `npm run db -- <command>` or
-`node scripts/wordle-db.mjs <command>`:
+`node scripts/wordette-db.mjs <command>`:
 
 | What you want | Command |
 | --- | --- |
@@ -62,7 +62,7 @@ Everything goes through one command. `npm run db -- <command>` or
 | Publish your changes | `npm run db:export` |
 
 Any change to the database only reaches readers once you run
-`npm run db:export` and put the updated `public/wordle/data/` files on the
+`npm run db:export` and put the updated `public/wordette/data/` files on the
 website. `npm run db:doctor` will tell you if you have forgotten.
 
 A sensible routine: run `npm run db:doctor` at the start of each term. It warns
@@ -71,13 +71,13 @@ exported files no longer match the database.
 
 ## Putting it on the site
 
-Copy `public/wordle/` to the web server and link to it, or embed it in an
+Copy `public/wordette/` to the web server and link to it, or embed it in an
 article with an iframe. Both are covered in
 [docs/EMBEDDING.md](docs/EMBEDDING.md), including how to make the iframe resize
 itself.
 
 Change the newspaper's name, the share link and the colours in
-`public/wordle/js/config.js` and `public/wordle/styles.css` — those two files
+`public/wordette/js/config.js` and `public/wordette/styles.css` — those two files
 are where anything worth customising lives.
 
 ## Notes

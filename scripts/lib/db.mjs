@@ -30,7 +30,7 @@ try {
 }
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const DB_PATH = process.env.GZAAT_WORDLE_DB ?? resolve(ROOT, 'db', 'gzaat-wordle.db');
+export const DB_PATH = process.env.GZAAT_WORDETTE_DB ?? resolve(ROOT, 'db', 'gzaat-wordette.db');
 export const SCHEMA_PATH = resolve(ROOT, 'db', 'schema.sql');
 
 export function openDatabase({ create = false } = {}) {

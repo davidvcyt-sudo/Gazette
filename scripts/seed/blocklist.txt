@@ -1,4 +1,4 @@
-# GZAAT Wordle — blocklist
+# GZAAT Wordette — blocklist
 #
 # Words listed here are never imported as puzzle answers and never scheduled,
 # even if they are common English words. They remain valid *guesses* if they

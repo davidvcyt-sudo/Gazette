@@ -7,13 +7,13 @@
  * that has not started yet.
  *
  * Point the game at it by setting `source.mode: 'api'` in
- * public/wordle/js/config.js.
+ * public/wordette/js/config.js.
  *
  * Endpoints
- *   GET  /api/wordle/puzzle?date=YYYY-MM-DD   today's or an earlier word
- *   GET  /api/wordle/puzzle?number=N          the same, by puzzle number
- *   GET  /api/wordle/stats?number=N           how everyone did on that puzzle
- *   POST /api/wordle/result                   record one finished game
+ *   GET  /api/wordette/puzzle?date=YYYY-MM-DD   today's or an earlier word
+ *   GET  /api/wordette/puzzle?number=N          the same, by puzzle number
+ *   GET  /api/wordette/stats?number=N           how everyone did on that puzzle
+ *   POST /api/wordette/result                   record one finished game
  *
  * Anything under public/ is served alongside, so the whole thing runs on one
  * origin with no CORS to configure.
@@ -22,8 +22,8 @@
 import { createServer } from 'node:http';
 
 import { openDatabase } from '../scripts/lib/db.mjs';
-import { encodeAnswer } from '../public/wordle/js/cipher.js';
-import { isISODate, todayISO } from '../public/wordle/js/dates.js';
+import { encodeAnswer } from '../public/wordette/js/cipher.js';
+import { isISODate, todayISO } from '../public/wordette/js/dates.js';
 import { serveStatic } from './serve-static.mjs';
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -140,13 +140,13 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host ?? 'localhost'}`);
 
   try {
-    if (url.pathname === '/api/wordle/puzzle' && request.method === 'GET') {
+    if (url.pathname === '/api/wordette/puzzle' && request.method === 'GET') {
       return handlePuzzle(url, response);
     }
-    if (url.pathname === '/api/wordle/stats' && request.method === 'GET') {
+    if (url.pathname === '/api/wordette/stats' && request.method === 'GET') {
       return handleStats(url, response);
     }
-    if (url.pathname === '/api/wordle/result' && request.method === 'POST') {
+    if (url.pathname === '/api/wordette/result' && request.method === 'POST') {
       return await handleResult(request, response);
     }
     if (url.pathname.startsWith('/api/')) {
@@ -162,9 +162,9 @@ const server = createServer(async (request, response) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`GZAAT Wordle API and site at http://localhost:${PORT}/wordle/`);
-  console.log(`today's puzzle: http://localhost:${PORT}/api/wordle/puzzle`);
-  console.log(`remember to set source.mode to 'api' in public/wordle/js/config.js`);
+  console.log(`GZAAT Wordette API and site at http://localhost:${PORT}/wordette/`);
+  console.log(`today's puzzle: http://localhost:${PORT}/api/wordette/puzzle`);
+  console.log(`remember to set source.mode to 'api' in public/wordette/js/config.js`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

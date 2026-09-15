@@ -1,5 +1,5 @@
 -- =============================================================================
--- GZAAT Wordle — word & puzzle database (SQLite)
+-- GZAAT Wordette — word & puzzle database (SQLite)
 --
 -- This file is the source of truth for the schema. Rebuild an empty database
 -- with:  npm run db:init

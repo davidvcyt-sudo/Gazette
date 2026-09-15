@@ -76,6 +76,6 @@ if (isMainModule()) {
     const served = await serveStatic(request, response);
     if (!served) response.writeHead(404, { 'content-type': 'text/plain' }).end('Not found');
   }).listen(port, () => {
-    console.log(`GZAAT Wordle is at http://localhost:${port}/wordle/`);
+    console.log(`GZAAT Wordette is at http://localhost:${port}/wordette/`);
   });
 }

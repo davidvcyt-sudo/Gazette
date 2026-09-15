@@ -407,7 +407,7 @@ function reportHeightToParent() {
   if (window.parent === window) return;
   const post = () => {
     window.parent.postMessage(
-      { type: 'gzaat-wordle:height', height: document.documentElement.scrollHeight },
+      { type: 'gzaat-wordette:height', height: document.documentElement.scrollHeight },
       '*',
     );
   };

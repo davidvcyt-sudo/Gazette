@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * GZAAT Wordle — word database CLI.
+ * GZAAT Wordette — word database CLI.
  *
  * Everything an editor needs to do to the puzzle database lives here:
  * building it, loading the word lists, filling the calendar, overriding a
  * particular day, and exporting the static files the website reads.
  *
- *   node scripts/wordle-db.mjs help
+ *   node scripts/wordette-db.mjs help
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -16,11 +16,11 @@ import { parseArgs } from 'node:util';
 import {
   ROOT, DB_PATH, openDatabase, applySchema, getMeta, setMeta, shuffled,
 } from './lib/db.mjs';
-import { addDays, daysBetween, isISODate, todayISO, weekdayName } from '../public/wordle/js/dates.js';
-import { encodeAnswer, decodeAnswer } from '../public/wordle/js/cipher.js';
+import { addDays, daysBetween, isISODate, todayISO, weekdayName } from '../public/wordette/js/dates.js';
+import { encodeAnswer, decodeAnswer } from '../public/wordette/js/cipher.js';
 
 const SEED_DIR = resolve(ROOT, 'scripts', 'seed');
-const EXPORT_DIR = resolve(ROOT, 'public', 'wordle', 'data');
+const EXPORT_DIR = resolve(ROOT, 'public', 'wordette', 'data');
 const WORD_LENGTH = 5;
 
 /** Rank 1 is the most common English five-letter word; obscurity grows from there. */
@@ -373,8 +373,8 @@ function cmdUnschedule() {
   console.log(`removed #${row.puzzle_number} ("${row.word}") from ${date}`);
   console.log(`"${row.word}" is back in the pool. ${date} now has no word, and export`);
   console.log('will refuse a calendar with a hole in it, so give it one:');
-  console.log(`  node scripts/wordle-db.mjs schedule --from ${date} --days 1`);
-  console.log(`  node scripts/wordle-db.mjs set --date ${date} --word <your word>`);
+  console.log(`  node scripts/wordette-db.mjs schedule --from ${date} --days 1`);
+  console.log(`  node scripts/wordette-db.mjs set --date ${date} --word <your word>`);
 }
 
 function cmdList() {
@@ -422,7 +422,7 @@ function cmdToday() {
   if (flags.json) {
     console.log(JSON.stringify(row, null, 2));
   } else {
-    console.log(`GZAAT Wordle #${row.puzzle_number} — ${row.puzzle_date} — ${row.word} (${row.difficulty})`);
+    console.log(`GZAAT Wordette #${row.puzzle_number} — ${row.puzzle_date} — ${row.word} (${row.difficulty})`);
   }
 }
 
@@ -577,7 +577,7 @@ function cmdDoctor() {
   // Is the exported JSON still in step with the database?
   const puzzlesPath = resolve(EXPORT_DIR, 'puzzles.json');
   if (!existsSync(puzzlesPath)) {
-    problems.push('public/wordle/data/puzzles.json has never been exported — run "export"');
+    problems.push('public/wordette/data/puzzles.json has never been exported — run "export"');
   } else if (schedule.length) {
     const exported = JSON.parse(readFileSync(puzzlesPath, 'utf8'));
     const todayRow = schedule.find((row) => row.puzzle_date === today);
@@ -607,12 +607,12 @@ function cmdDoctor() {
 }
 
 function cmdHelp() {
-  console.log(`GZAAT Wordle — word database CLI
+  console.log(`GZAAT Wordette — word database CLI
 
-  node scripts/wordle-db.mjs <command> [options]
+  node scripts/wordette-db.mjs <command> [options]
 
 Setting up
-  init [--force]                 Create db/gzaat-wordle.db from db/schema.sql
+  init [--force]                 Create db/gzaat-wordette.db from db/schema.sql
   import                         Load scripts/seed/*.txt into the dictionary
 
 Running the calendar
@@ -640,9 +640,9 @@ Publishing
 
 Examples
   npm run db:reset                        # init + import + schedule + export
-  node scripts/wordle-db.mjs list --days 30
-  node scripts/wordle-db.mjs set --date 2026-12-25 --word merry --note "holiday issue"
-  node scripts/wordle-db.mjs add --word gzaat --answer --note "school name"
+  node scripts/wordette-db.mjs list --days 30
+  node scripts/wordette-db.mjs set --date 2026-12-25 --word merry --note "holiday issue"
+  node scripts/wordette-db.mjs add --word gzaat --answer --note "school name"
 `);
 }
 

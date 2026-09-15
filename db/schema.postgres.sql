@@ -1,5 +1,5 @@
 -- =============================================================================
--- GZAAT Wordle — the same design for PostgreSQL
+-- GZAAT Wordette — the same design for PostgreSQL
 --
 -- The CLI in scripts/ speaks SQLite, which is what makes this project run with
 -- no installation at all. If the Gazette's website already has a Postgres

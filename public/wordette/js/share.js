@@ -1,5 +1,5 @@
 /**
- * "GZAAT Wordle #12 4/6" — the block of text readers paste into group chats.
+ * "GZAAT Wordette #12 4/6" — the block of text readers paste into group chats.
  */
 
 import { STATUS, resultGrid } from './game.js';

@@ -13,7 +13,7 @@
  * imports this exact file so the two can never drift apart.
  */
 
-const SALT = 'gzaat-wordle-v1';
+const SALT = 'gzaat-wordette-v1';
 
 /** Deterministic keystream for one puzzle: FNV-1a seed, xorshift32 output. */
 function keystream(puzzleNumber, length) {
